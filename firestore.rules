@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function spacePath() { return /databases/$(database)/documents/pub/space; }
+    function isOwner() { return signedIn() && exists(spacePath()) && get(spacePath()).data.owner == request.auth.uid; }
+
+    // Who owns this space. The first Google sign-in claims it; after that only the owner can change it.
+    match /pub/space {
+      allow get: if true;
+      allow create: if signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'
+                    && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isOwner();
+    }
+
+    // Shared projects. Anyone with a session can read and write here, but every document is encrypted
+    // with a key that only that project's links carry, and nothing at this level can be listed.
+    match /sh/{place}/{rest=**} {
+      allow read, write: if signedIn();
+    }
+
+    // Invites: fetched by exact id (derived from a link), never listed. Only the owner creates them.
+    match /inv/{id} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update, delete: if isOwner();
+    }
+
+    // Display names shown in version history.
+    match /people/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Each visitor's own list of projects they opened with a link.
+    match /data/users/{uid}/{rest=**} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Everything else is the owner's private space.
+    match /{coll}/{rest=**} {
+      allow read, write: if coll in ['meta', 'proj', 'saves', 'live', 'assets', 'templates', 'shares'] && isOwner();
+    }
+  }
+}

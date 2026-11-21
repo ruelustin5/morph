@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+        "$conn": {
+          ".write": "auth != null && (!data.exists() || data.child('by').val() === auth.uid) && (!newData.exists() || newData.child('by').val() === auth.uid)"
+        }
+      }
+    },
+    "locks": {
+      "$lock": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

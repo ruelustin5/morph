@@ -1,0 +1,30 @@
+{
+  "name": "morph-slides",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Slide editor with per-object morph animations, live collaboration and magic links.",
+  "scripts": {
+    "build": "node build.mjs web",
+    "build:artifact": "node build.mjs",
+    "build:test": "node build.mjs webtest"
+  },
+  "dependencies": {
+    "@blueprintjs/core": "^5.19.0",
+    "@blueprintjs/icons": "^5.23.0",
+    "@blueprintjs/select": "^5.3.20",
+    "@reyka/openpolotno": "^1.6.0",
+    "firebase": "^12.19.0",
+    "mathjax": "^3.2.2",
+    "mobx": "^6.13.7",
+    "mobx-react-lite": "^4.1.1",
+    "mobx-state-tree": "^6.0.1",
+    "nanoid": "^3.3.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-window": "^1.8.11",
+    "sortablejs": "^1.15.7"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}
