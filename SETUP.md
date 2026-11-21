@@ -7,6 +7,15 @@ This puts Morph on its own web address, free, with no credit card:
 
 Total time: about 15 minutes. Do the steps in order. Each step says what you should see when it worked.
 
+## 0. Create the empty repository (Claude cannot create it)
+
+1. Go to https://github.com/new (signed in as **ruelustin5**).
+2. Repository name: `morph`. Visibility: **Public** (GitHub Pages is free for public repositories; choose Private
+   only if this account has GitHub Pro). The code has no secrets: projects are stored in Firebase, encrypted when shared.
+3. Leave **Add a README**, **.gitignore** and **license** all off/None, so the repository is completely empty. Click **Create repository**.
+4. Tell Claude in the chat: **"The morph repository is created."** Claude then pushes the code into it.
+   Continue with steps 1 to 5 meanwhile; step 6 needs the code to be there.
+
 Repository: **https://github.com/ruelustin5/morph**
 Website address once published: **https://ruelustin5.github.io/morph/**
 
@@ -89,7 +98,7 @@ Website address once published: **https://ruelustin5.github.io/morph/**
 
 1. Open https://github.com/ruelustin5/morph/settings/pages
 2. Under **Build and deployment → Source**, choose **GitHub Actions**.
-3. If GitHub says Pages is not available for this repository (private repositories need a paid GitHub plan):
+3. If GitHub says Pages is not available for this repository (it was made Private without GitHub Pro):
    go to **Settings → General → Danger Zone → Change repository visibility → Public**, confirm, then come back to step 7.2.
    (The code has no secrets: projects are stored in Firebase, not in the repository.)
 4. Open https://github.com/ruelustin5/morph/actions. If no **Deploy** run is in progress, click **Deploy** (left) → **Run workflow** → **Run workflow**.
