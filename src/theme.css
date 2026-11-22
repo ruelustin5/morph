@@ -347,7 +347,20 @@ html body .bp5-segmented-control .bp5-button { margin: 0 !important; min-height:
 .obj-menu .bp5-menu-item-label { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* templates */
-.tpl-gallery { width: min(720px, calc(100vw - 32px)); }
+.tpl-gallery { width: min(860px, calc(100vw - 32px)); }
+.tpl-themes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tpl-theme { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 6px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--md-on-surface); box-shadow: inset 0 0 0 1px var(--md-outline-variant); }
+.tpl-theme:hover { background: var(--md-surface-low); }
+.tpl-theme:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 1px; }
+.tpl-theme.is-on { background: var(--md-secondary-container, #d3e3fd); box-shadow: none; }
+.tpl-theme > .bp5-icon { margin-left: 4px; }
+.tpl-swatch { position: relative; width: 22px; height: 22px; border-radius: 50%; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); flex: none; }
+.tpl-swatch i { position: absolute; display: block; }
+.tpl-swatch i:first-child { left: 0; top: 0; bottom: 0; width: 45%; }
+.tpl-swatch i:last-child { right: 4px; top: 6px; width: 8px; height: 8px; border-radius: 50%; }
+.tpl-current { display: inline-flex; width: 16px; height: 16px; border-radius: 50%; align-items: center; justify-content: center; background: var(--md-primary); color: var(--md-on-primary, #fff); margin-right: -4px; }
+.tpl-hint { margin: 0 0 14px; min-height: 24px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12px; color: var(--md-on-surface-variant); }
+.tpl-foot { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--md-on-surface-variant); }
 .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .tpl-tile { all: unset; box-sizing: border-box; position: relative; display: flex; flex-direction: column; gap: 6px; cursor: pointer; min-width: 0; }
 .tpl-thumb { display: block; position: relative; overflow: hidden; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--md-outline-variant); }

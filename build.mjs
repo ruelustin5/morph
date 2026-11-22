@@ -20,7 +20,9 @@ const common = {
       'firebase/firestore': FAKE_FB + '/firestore.js', 'firebase/database': FAKE_FB + '/database.js',
     } : {}),
   },
-  define: { 'process.env.NODE_ENV': '"production"', global: 'window', __TARGET__: JSON.stringify(WEB ? 'web' : 'artifact'), __FAKE_FB__: TARGET === 'webtest' ? 'true' : 'false' },
+  define: { 'process.env.NODE_ENV': '"production"', global: 'window', __TARGET__: JSON.stringify(WEB ? 'web' : 'artifact'), __FAKE_FB__: TARGET === 'webtest' ? 'true' : 'false',
+    // The Claude artifact cannot see its own claude.ai address; only that build needs it (for magic links).
+    __ARTIFACT_URL__: JSON.stringify(WEB ? '' : (process.env.ARTIFACT_URL || 'https://claude.ai/artifact/3S8SK1e9ZDr6SJZUHNcMvd')) },
 };
 fs.mkdirSync('build', { recursive: true });
 // 1) standalone player embedded into exported presentations

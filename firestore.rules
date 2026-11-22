@@ -13,15 +13,21 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
+    // Names are never stored in readable places: they travel inside encrypted project data and in the
+    // live presence of a project's room (only people with the link can find that room).
+
     // Shared projects live under sh/<place>/…, where <place> is a long random id that only that project's
     // links carry, and every document is encrypted with that project's key.
     // The sh collection itself can never be read or listed, so places cannot be discovered.
+    // The owner opens a place by creating its (empty) marker document; nobody can read or list markers.
     match /sh/{place} {
-      allow read, write: if false;
+      allow get, list: if false;
+      allow create, update, delete: if isOwner();
     }
-    // Inside a known place: anyone with a session (someone who has the link) can read and write.
+    // Inside a place the owner opened: anyone with a session (someone who has the link) can read and write.
+    // Random places cannot be created, so the database cannot be filled with junk.
     match /sh/{place}/{coll}/{doc=**} {
-      allow read, write: if signedIn();
+      allow read, write: if signedIn() && exists(/databases/$(database)/documents/sh/$(place));
     }
 
     // Invites: fetched by exact id (derived from a link), never listed. Only the owner creates them.
@@ -29,13 +35,6 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create, update, delete: if isOwner();
-    }
-
-    // Display names shown in version history: fetched one by one, never listed.
-    match /people/{uid} {
-      allow get: if signedIn();
-      allow list: if false;
-      allow write: if signedIn() && request.auth.uid == uid;
     }
 
     // Each visitor's own list of projects they opened with a link.

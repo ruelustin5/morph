@@ -42,7 +42,7 @@ function slideMenu(c, i, n) {
     <Menu>
       <MenuItem icon="insert" text="New slide before" onClick={() => c.addSlide(i)} />
       <MenuItem icon="add" text="New slide after" onClick={() => c.addSlide(i + 1)} />
-      <MenuItem icon="new-layers" text="From template…" onClick={() => c.setUi({ tplAt: i + 1 })} />
+      <MenuItem icon="new-layers" text="Layouts and templates…" onClick={() => c.setUi({ tplAt: i + 1 })} />
       <MenuDivider />
       <MenuItem icon="duplicate" text="Duplicate" label="Ctrl+D" onClick={() => c.duplicateSlide(i)} />
       <MenuItem icon="clean" text="Duplicate as new objects" onClick={() => c.duplicateSlide(i, { unlinked: true })} />
@@ -130,11 +130,11 @@ export function SlideSorter({ c }) {
       <div className="sorter-head">
         <span>Slides <span className="muted">{n}</span></span>
         <span>
-          <Tooltip content="From template" placement="bottom" compact>
-            <Button small minimal icon="new-layers" aria-label="New slide from template" onClick={() => c.setUi({ tplAt: c.active + 1 })} />
+          <Tooltip content="Layouts and themes" placement="bottom" compact>
+            <Button small minimal icon="new-layers" aria-label="New slide from a layout" onClick={() => c.setUi({ tplAt: c.active + 1 })} />
           </Tooltip>
           <Tooltip content="New slide" placement="bottom" compact>
-            <Button small minimal icon="plus" aria-label="New slide" onClick={() => c.addSlide(c.active + 1)} />
+            <Button small minimal icon="plus" aria-label="New slide" onClick={() => c.newSlideAt(c.active + 1)} />
           </Tooltip>
         </span>
       </div>
@@ -143,7 +143,7 @@ export function SlideSorter({ c }) {
         {slides.map((s, i) => (
           <div key={s.id} className={'slide-item' + (i === c.active ? ' active' : '')} data-index={i}>
             <div className="slide-insert" role="button" aria-label={`Insert a slide before slide ${i + 1}`}
-              onClick={(e) => { e.stopPropagation(); c.addSlide(i); }}>
+              onClick={(e) => { e.stopPropagation(); c.newSlideAt(i); }}>
               <span><Icon icon="plus" size={10} /></span>
             </div>
             <div className="slide-num">{i + 1}</div>
@@ -173,7 +173,7 @@ export function SlideSorter({ c }) {
             </ContextMenu>
           </div>
         ))}
-        <div className="add-tile" role="button" tabIndex={-1} onClick={() => c.addSlide(n)}>
+        <div className="add-tile" role="button" tabIndex={-1} onClick={() => c.newSlideAt(n)}>
           <Icon icon="plus" size={12} /> New slide
         </div>
       </div>

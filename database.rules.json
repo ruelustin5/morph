@@ -4,14 +4,16 @@
       "$room": {
         ".read": "auth != null",
         "$conn": {
-          ".write": "auth != null && (!data.exists() || data.child('by').val() === auth.uid) && (!newData.exists() || newData.child('by').val() === auth.uid)"
+          ".write": "auth != null && (!data.exists() || data.child('by').val() === auth.uid) && (!newData.exists() || newData.child('by').val() === auth.uid)",
+          ".validate": "newData.hasChildren(['by', 'at'])"
         }
       }
     },
     "locks": {
       "$lock": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['holder', 'exp']) && newData.child('exp').isNumber() && newData.child('exp').val() <= now + 120000"
       }
     }
   }

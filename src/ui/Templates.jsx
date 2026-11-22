@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Dialog, DialogBody, DialogFooter, Icon, InputGroup, Spinner, Tooltip } from '@blueprintjs/core';
 import { Thumb } from './SlideSorter';
 import { useController } from './hooks';
-import { BUILTIN_TEMPLATES } from '../builtin-templates';
+import { fitPage } from '../builtin-templates';
+import { THEMES, themeById, themeLayouts } from '../themes';
+import { ensureFonts } from '../controller';
 
 /** Name a slide and keep it as a template (shared by all projects). */
 export function SaveTemplateDialog({ c }) {
@@ -41,45 +43,85 @@ export function SaveTemplateDialog({ c }) {
   );
 }
 
-/** Pick a template (or a blank slide) to insert. */
+/** Pick a slide layout of a theme (or a blank slide, or one of your templates) to insert. */
 export function TemplateGallery({ c }) {
   useController(c);
   const at = c.ui.tplAt;
   const open = at != null && !!c.project;
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [view, setView] = useState('classic');
   useEffect(() => {
     if (!open) return;
     setConfirm(null);
-    setLoading(!c.templates);
-    c.loadTemplates().catch(() => {}).finally(() => setLoading(false));
+    setView(c.ui.tplView || (c.theme && c.theme.id) || 'classic');
+    if (c.isOwner) {
+      setLoading(!c.templates);
+      c.loadTemplates().catch(() => {}).finally(() => setLoading(false));
+    }
   }, [open]);
-  const close = () => c.setUi({ tplAt: null });
+  const PW = c.project ? c.project.width : 1920, PH = c.project ? c.project.height : 1080;
+  const layouts = useMemo(() => (view === 'yours' ? [] : themeLayouts(view)).map((t) => ({ ...t, fitted: fitPage(t.page, t.w, t.h, PW, PH) })), [view, PW, PH]);
+  useEffect(() => { if (open && layouts.length) ensureFonts({ slides: layouts.map((t) => ({ page: t.page })), fonts: [] }); }, [open, view]);
+  const close = () => c.setUi({ tplAt: null, tplView: null });
   const list = c.templates || [];
+  const T = themeById(view);
+  const cur = c.theme;
+  const curCount = cur && T && cur.id !== T.id ? c.themeSlides(cur.id).length : 0;
+  const pick = (t) => { close(); c.insertTemplate(t, at); };
   return (
     <Dialog isOpen={open} onClose={close} title="New slide" icon="add" className="tpl-gallery">
       {open && (
         <DialogBody>
-          <div className="tpl-grid">
-            <button type="button" className="tpl-tile" onClick={() => { close(); c.addSlide(at); }}>
-              <span className="tpl-thumb tpl-blank" style={{ aspectRatio: `${c.project.width} / ${c.project.height}` }}><Icon icon="plus" size={22} /></span>
-              <span className="tpl-name">Blank</span>
-            </button>
-            {BUILTIN_TEMPLATES.map((t) => (
-              <button key={t.id} type="button" className="tpl-tile" onClick={() => { close(); c.insertTemplate(t, at); }}>
-                <span className="tpl-thumb" style={{ aspectRatio: `${t.w} / ${t.h}` }}>
-                  <Thumb page={t.page} w={t.w} h={t.h} ctx={c.ctx} tick={c.renderTick} />
+          <div className="tpl-themes" role="tablist" aria-label="Themes">
+            {THEMES.map((th) => (
+              <button key={th.id} type="button" role="tab" aria-selected={view === th.id}
+                className={'tpl-theme' + (view === th.id ? ' is-on' : '')} onClick={() => setView(th.id)}>
+                <span className="tpl-swatch" style={{ background: th.paper }}>
+                  <i style={{ background: th.panel }} /><i style={{ background: th.accent }} />
                 </span>
-                <span className="tpl-name">{t.name}</span>
+                {th.name}
+                {cur && cur.id === th.id && <span className="tpl-current" title="This presentation's theme"><Icon icon="tick" size={10} /></span>}
               </button>
             ))}
+            {c.isOwner && (
+              <button type="button" role="tab" aria-selected={view === 'yours'}
+                className={'tpl-theme' + (view === 'yours' ? ' is-on' : '')} onClick={() => setView('yours')}>
+                <Icon icon="bookmark" size={12} /> Yours
+              </button>
+            )}
           </div>
-          {c.isOwner && <div className="tpl-section">Yours</div>}
-          {c.isOwner && list.length > 0 && <div className="tpl-grid">
+          {T && (
+            <p className="tpl-hint">
+              {curCount > 0
+                ? <>This presentation uses {cur.name}. <Button small minimal intent="primary" text={`Switch ${curCount} slide${curCount > 1 ? 's' : ''} to ${T.name}`}
+                    onClick={() => c.setTheme(T.id, { restyle: true })} /></>
+                : <>Layouts of a theme share their shapes, so going from one to the next morphs smoothly.</>}
+            </p>
+          )}
+          {view !== 'yours' && (
+            <div className="tpl-grid">
+              <button type="button" className="tpl-tile" onClick={() => { close(); c.addSlide(at, T ? { background: T.paper } : {}); }}>
+                <span className="tpl-thumb tpl-blank" style={{ aspectRatio: `${c.project.width} / ${c.project.height}`, background: T ? T.paper : undefined, color: T ? T.muted : undefined }}>
+                  <Icon icon="plus" size={22} />
+                </span>
+                <span className="tpl-name">Blank</span>
+              </button>
+              {layouts.map((t) => (
+                <button key={t.id} type="button" className="tpl-tile" onClick={() => pick(t)}>
+                  <span className="tpl-thumb" style={{ aspectRatio: `${c.project.width} / ${c.project.height}` }}>
+                    <Thumb page={t.fitted} w={PW} h={PH} ctx={c.ctx} tick={c.renderTick} />
+                  </span>
+                  <span className="tpl-name">{t.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {view === 'yours' && list.length > 0 && <div className="tpl-grid">
             {list.map((t) => (
               <div key={t.id} className="tpl-tile" role="button" tabIndex={0}
-                onClick={() => { close(); c.insertTemplate(t, at); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') { close(); c.insertTemplate(t, at); } }}>
+                onClick={() => pick(t)}
+                onKeyDown={(e) => { if (e.key === 'Enter') pick(t); }}>
                 <span className="tpl-thumb" style={{ aspectRatio: `${t.w} / ${t.h}` }}>
                   <Thumb page={t.page} w={t.w} h={t.h} ctx={c.ctx} tick={c.renderTick} />
                 </span>
@@ -93,11 +135,18 @@ export function TemplateGallery({ c }) {
               </div>
             ))}
           </div>}
-          {loading && <div className="tpl-loading"><Spinner size={18} /></div>}
-          {c.isOwner && !loading && !list.length && (
+          {view === 'yours' && loading && <div className="tpl-loading"><Spinner size={18} /></div>}
+          {view === 'yours' && !loading && !list.length && (
             <p className="muted tpl-empty"><Icon icon="bookmark" size={12} /> Right-click a slide › Save as template</p>
           )}
         </DialogBody>
+      )}
+      {open && (
+        <DialogFooter actions={<Button text="Cancel" onClick={close} />}>
+          {cur
+            ? <span className="tpl-foot">The + button opens this window. <Button small minimal text="Turn off" onClick={() => c.setTheme(null)} /></span>
+            : <span className="tpl-foot muted">Pick a layout to give this presentation a theme.</span>}
+        </DialogFooter>
       )}
     </Dialog>
   );

@@ -1,6 +1,6 @@
 import asyncio, shutil
 from playwright.async_api import async_playwright
-BASE = 'http://localhost:8765/dist-webtest/index.html'
+BASE = 'http://localhost:8766/dist-webtest/index.html'
 OUT = '/tmp/'
 async def main():
     shutil.rmtree('/tmp/pw-web', ignore_errors=True)
@@ -24,7 +24,7 @@ async def main():
         pid = await ev("window.__morph.controller.projectId")
         inv = await ev(f"(async () => {{ const c = window.__morph.controller; const i = await c.createInvite('{pid}', 'Bob'); return i; }})()"); await A.wait_for_timeout(1000)
         link = await ev(f"(() => location.origin + location.pathname + '#' + '{inv['code']}')()")
-        print('magic link:', link.replace('http://localhost:8765', ''))
+        print('magic link:', link.replace('http://localhost:8766', ''))
         leak = await ev("Object.keys(localStorage).filter(k => k.startsWith('fbfs:sh/') && /SHARED-B|Web shared deck/.test(localStorage.getItem(k))).length")
         print('plaintext leaks in shared docs:', leak)
         # --- Bob opens the magic link (new tab, anonymous)
@@ -36,6 +36,9 @@ async def main():
         print('A sees Bob edit:', await ev("window.__morph.controller.project.slides[0].page.children.some(e => e.text === 'BOB-EDIT')"))
         print('A sees Bob live:', await ev("window.__morph.controller.othersIn(window.__morph.controller.projectId).map(x => window.__morph.controller.personOf(x).name)"))
         print('B direct read of private list:', await B.evaluate("(async () => { const db = await window.claude.use('db'); try { await db.doc('meta/projects').get(); return 'READ!'; } catch (e) { return e.code; } })()"))
+        print('B write to an unshared place:', await B.evaluate("(async () => { const db = await window.claude.use('db'); try { await db.doc('sh/notshared123/live/x').set({ a: 1 }); return 'WROTE!'; } catch (e) { return e.code; } })()"))
+        print('B list shared places:', await B.evaluate("(async () => { const db = await window.claude.use('db'); try { const r = await db.collection('sh').get(); return 'LISTED ' + r.length; } catch (e) { return e.code; } })()"))
+        print('B overwrite the space owner:', await B.evaluate("(async () => { const db = await window.claude.use('db'); try { await db.doc('pub/space').set({ owner: 'x' }); return 'WROTE!'; } catch (e) { return e.code; } })()"))
         print('B denied during normal use:', await B.evaluate("window.__fsDenied.slice(0, 6)"))
         # Bob reloads without the link: comes back to the project
         await B.goto(BASE + '?u=bob'); await B.wait_for_timeout(4500)

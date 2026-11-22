@@ -52,6 +52,7 @@ export async function runTransaction(r, fn) {
   const cur = snap(r.path).val();
   const next = fn(cur);
   if (next === undefined) return { committed: false, snapshot: snap(r.path) };
+  if (r.path.startsWith('locks/') && !(next && typeof next.exp === 'number' && next.exp <= Date.now() + 120000)) throw Object.assign(new Error('validate failed'), { code: 'PERMISSION_DENIED' });
   localStorage.setItem(K(r.path), JSON.stringify(next));
   return { committed: true, snapshot: snap(r.path) };
 }

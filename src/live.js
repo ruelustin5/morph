@@ -1,7 +1,8 @@
 // Live collaboration engine.
 //
 // Every project has a shared "working copy" in the artifact database:
-//   <base>live/meta        { order, title, width, height, fonts, objects, rev, by, at }
+//   <base>live/meta        { order, title, width, height, fonts, objects, settings, rev, by, at }
+//                          settings: { theme, latex: { packages }, owners: { slideId: personKey }, people }
 //   <base>live/s-<slideId> { page, anim, rev, by, at }      (images stored once under assets/<key>)
 // Each screen keeps, per document, the last version it knows from the database (its "base").
 // Local edits are the difference between that base and the screen's current state; they are written
@@ -133,7 +134,7 @@ export class LiveSync {
   }
 
   metaFromDoc(d) {
-    return { order: (d.order || []).slice(), title: d.title || 'Untitled presentation', width: d.width || 1920, height: d.height || 1080, fonts: clone(d.fonts || []), objects: clone(d.objects || {}), rev: d.rev || 0, at: d.at || 0 };
+    return { order: (d.order || []).slice(), title: d.title || 'Untitled presentation', width: d.width || 1920, height: d.height || 1080, fonts: clone(d.fonts || []), objects: clone(d.objects || {}), settings: clone(d.settings || {}), rev: d.rev || 0, at: d.at || 0 };
   }
 
   // ---- loading ----------------------------------------------------------------
@@ -155,7 +156,7 @@ export class LiveSync {
     // Slides listed but not stored (should not happen): keep the list consistent.
     meta.order = meta.order.filter((sid) => this.bases.has(sid));
     this.baseMeta = meta;
-    const project = { version: 1, title: meta.title, width: meta.width, height: meta.height, fonts: meta.fonts, objects: dedupeNames(clone(meta.objects)), slides };
+    const project = { version: 1, title: meta.title, width: meta.width, height: meta.height, fonts: meta.fonts, objects: dedupeNames(clone(meta.objects)), settings: clone(meta.settings || {}), slides };
     return { project, at: meta.at };
   }
 
@@ -170,7 +171,7 @@ export class LiveSync {
       await this.upload(w.assets);
       await this.be.set(this.path('s-' + s.page.id), { v: 1, page: w.page, anim: w.anim, rev: 1, by: this.tab, at: Date.now() });
     }
-    const meta = { v: 1, order: project.slides.map((s) => s.page.id), title: project.title, width: project.width, height: project.height, fonts: await this.fontsToWire(project.fonts), objects: project.objects || {}, rev: 1, by: this.tab, at: Date.now() };
+    const meta = { v: 1, order: project.slides.map((s) => s.page.id), title: project.title, width: project.width, height: project.height, fonts: await this.fontsToWire(project.fonts), objects: project.objects || {}, settings: project.settings || {}, rev: 1, by: this.tab, at: Date.now() };
     await this.be.set(this.path('meta'), meta);
     return true;
   }
@@ -371,7 +372,7 @@ export class LiveSync {
     const at = Date.now();
     if (!(await this.be.lease(path, this.tab))) throw Object.assign(new Error('busy'), { code: 'busy' });
     const fontsWire = await this.fontsToWire(merged.fonts);
-    await this.be.set(path, { v: 1, order: merged.order, title: merged.title, width: merged.width, height: merged.height, fonts: fontsWire, objects: merged.objects, rev, by: this.tab, at });
+    await this.be.set(path, { v: 1, order: merged.order, title: merged.title, width: merged.width, height: merged.height, fonts: fontsWire, objects: merged.objects, settings: merged.settings || {}, rev, by: this.tab, at });
     this.baseMeta = { ...clone(merged), rev, at };
     const now = this.host.getMeta();
     if (now) {

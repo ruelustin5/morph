@@ -33,7 +33,6 @@ if (auth) {
     currentUser = u;
     if (u) {
       resolveAuth(u);
-      if (!u.isAnonymous && u.displayName) setTimeout(() => user.setName(u.displayName), 0); // owner's name for guests
       return;
     }
     try { await signInAnonymously(auth); } catch (e) { console.error('Anonymous sign-in failed', e); resolveAuth(null); }
@@ -129,7 +128,6 @@ async function readSpaceOwner(force) {
   catch (e) { spaceOwner = null; }
   return spaceOwner;
 }
-const profileCache = new Map();
 const user = {
   async isOwner() { const u = await who(); return !!(u && !u.isAnonymous && (await readSpaceOwner()) === u.uid); },
   async canEdit() { return !!(await authReady); },
@@ -139,27 +137,17 @@ const user = {
     const u = await who();
     return { id: u ? u.uid : null, name: (u && !u.isAnonymous && u.displayName) || '', avatarUrl: (u && u.photoURL) || '', color: null, email: null, guest: !!(u && u.isAnonymous) };
   },
+  /** Names are not stored in the database (privacy): only your own is known here; others come from
+   *  the encrypted project data and from live presence. */
   async profiles(ids) {
-    await authReady;
-    const list = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+    const u = await who();
     const out = {};
-    await Promise.all(list.map(async (id) => {
-      if (!profileCache.has(id)) {
-        let p = { id, name: '', avatarUrl: '' };
-        try { const s = await getDoc(doc(fs, `people/${id}`)); if (s.exists()) p = { id, ...unpack(s.data()) }; } catch (e) { /* unknown */ }
-        profileCache.set(id, p);
-      }
-      out[id] = profileCache.get(id);
-    }));
+    for (const id of (Array.isArray(ids) ? ids : [ids]).filter(Boolean)) {
+      out[id] = u && id === u.uid && !u.isAnonymous ? { id, name: u.displayName || '', avatarUrl: u.photoURL || '' } : { id, name: '', avatarUrl: '' };
+    }
     return out;
   },
-  /** Web only: the name others see in version history. */
-  async setName(name) {
-    const u = await who();
-    if (!u || !name) return;
-    profileCache.delete(u.uid);
-    try { await setDoc(doc(fs, `people/${u.uid}`), pack('', { name: String(name).slice(0, 40), avatarUrl: u.photoURL || '' })); } catch (e) { /* optional */ }
-  },
+  async setName() { /* names are not stored in the database */ },
   async search() { return []; },
 };
 
@@ -277,7 +265,6 @@ export const web = {
       await setDoc(doc(fs, 'pub/space'), pack('pub/space', { owner: u.uid, at: Date.now() }));
       spaceOwner = u.uid;
     }
-    await user.setName(u.displayName || 'Owner');
     return { owner: (await readSpaceOwner(true)) === u.uid };
   },
   async signOut() { if (auth) await fbSignOut(auth); },

@@ -13,14 +13,16 @@ function allowed(op, path, data) {
   if (!__state.user) return false;
   const seg = path.split('/');
   const top = seg[0];
-  if (top === 'sh') return seg.length > 2; // sh/<place> itself: never readable or listable
+  if (top === 'sh') {
+    if (seg.length <= 2) return (op === 'set' || op === 'delete') && isOwner(); // place marker: owner opens it, nobody reads it
+    return raw('sh/' + seg[1]) != null; // only inside places the owner opened
+  }
   if (top === 'inv') return op === 'get' || ((op === 'set' || op === 'delete') && isOwner());
   if (top === 'pub' && seg[1] === 'space') {
     if (op === 'get') return true;
     if (op === 'set') { const cur = raw(path); return cur ? isOwner() : (!__state.user.isAnonymous && data && data.owner === uid()); }
     return isOwner();
   }
-  if (top === 'people') return op === 'get' || (op !== 'list' && seg[1] === uid());
   if (top === 'data' && seg[1] === 'users') return seg[2] === uid();
   if (OWNER_COLLS.includes(top)) return isOwner();
   return false;

@@ -8,6 +8,7 @@ import {
 } from './project';
 import { flattenPage } from './render';
 import { fitPage } from './builtin-templates';
+import { themeById, parseRoleId, roleId, COLOR_TOKENS, ROLES, decoRadius } from './themes';
 import { extractAssets, injectAssets, fetchAsset, ensureAsset } from './storage';
 import {
   DbBackend, IdbBackend, saveProject, saveVersion, renameVersion, deleteVersion, loadLatest, loadSave, listSaves, saveDraft, loadDraft, clearDraft,
@@ -28,7 +29,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* global __TARGET__ */
 export const TARGET = typeof __TARGET__ !== 'undefined' ? __TARGET__ : 'artifact';
 // Where magic links point. The artifact page cannot see its own claude.ai address, so it is written here.
-const ARTIFACT_URL = 'https://claude.ai/artifact/3S8SK1e9ZDr6SJZUHNcMvd';
+/* global __ARTIFACT_URL__ */
+const ARTIFACT_URL = typeof __ARTIFACT_URL__ !== 'undefined' ? __ARTIFACT_URL__ : '';
 const CODE_RE = /^#?([A-Za-z0-9]{4})-?([A-Za-z0-9]{4})-?([A-Za-z0-9]{4})$/;
 
 /** A code in the address (#ABCD-EFGH-JKLM) is read once and removed from the address bar. */
@@ -272,8 +274,9 @@ export class Controller {
   spaceName() {
     if (this.isOwner) return 'Your space';
     if (this.spaceUnclaimed && TARGET === 'web') return 'Welcome to Morph';
+    const k = this.keyring && (this.keyring.find((x) => x.pid === this.projectId) || this.keyring.find((x) => x.ownerName));
     const p = this.spaceOwnerId && this.profiles && this.profiles[this.spaceOwnerId];
-    const n = p && p.name;
+    const n = (k && k.ownerName) || (p && p.name);
     return n ? `${n.split(' ')[0]}’s space` : 'Shared with you';
   }
 
@@ -350,7 +353,7 @@ export class Controller {
       return { ok: true };
     }
     const prev = this.keyring.find((k) => k.pid === inv.pid);
-    const k = { ...(prev || {}), pid: inv.pid, sid: inv.sid, key: inv.key, code, title: inv.title || (prev && prev.title), as: inv.name || '', at: Date.now() };
+    const k = { ...(prev || {}), pid: inv.pid, sid: inv.sid, key: inv.key, code, title: inv.title || (prev && prev.title), as: inv.name || '', ownerName: inv.owner || (prev && prev.ownerName) || '', at: Date.now() };
     this.keyring = [k, ...this.keyring.filter((x) => x.pid !== inv.pid)];
     await this.saveKeyring();
     if (inv.name && !(this.me && this.me.name)) { this.setNick(inv.name); this.needsName = false; }
@@ -441,7 +444,8 @@ export class Controller {
   }
 
   async _writeInvite(entry, inv) {
-    const { id, doc } = await sealInvite(inv.code, { pid: entry.id, sid: entry.shared.sid, key: entry.shared.key, title: entry.title || '', name: inv.name || '' });
+    const ownerName = String((this.me && this.me.name) || this.myName() || '').split(' ')[0];
+    const { id, doc } = await sealInvite(inv.code, { pid: entry.id, sid: entry.shared.sid, key: entry.shared.key, title: entry.title || '', name: inv.name || '', owner: ownerName });
     await this.backend.set(`inv/${id}`, doc);
     return id;
   }
@@ -510,6 +514,8 @@ export class Controller {
     } else {
       shared = { sid: randomId(16), key: await newKey() };
       to = { be: new ScopedBackend(this.backend, `sh/${shared.sid}/`, shared.key), base: '' };
+      // Opens the place (the database rules only accept writes inside places the owner opened).
+      await this.backend.set(`sh/${shared.sid}`, { at: Date.now() });
     }
     this.busy = mode === 'share' ? 'Sharing…' : mode === 'rekey' ? 'Changing the key…' : 'Making it private…';
     this.emitNow();
@@ -744,6 +750,7 @@ export class Controller {
       getMeta: () => this.project && ({
         order: this.project.slides.map((x) => x.id), title: this.project.title, width: this.project.width,
         height: this.project.height, fonts: this.project.fonts || [], objects: this.project.objects || {},
+        settings: this.project.settings || {},
       }),
       applySlide: (sid, state, info) => this.applyLiveSlide(sid, state, info),
       applyMeta: (meta, getBase, info) => this.applyLiveMeta(meta, getBase, info),
@@ -921,6 +928,7 @@ export class Controller {
     p.title = meta.title;
     p.fonts = meta.fonts || [];
     p.objects = meta.objects || {};
+    p.settings = meta.settings || {};
     if (normalizeRegistry(p) && this.live) this.live.metaChanged();
     if (meta.width !== p.width || meta.height !== p.height) {
       p.width = meta.width; p.height = meta.height;
@@ -1342,11 +1350,18 @@ export class Controller {
     this.emitNow();
   }
 
-  /** New slide from a template: its objects are new (never linked to the template or other slides). */
+  /**
+   * New slide from a template: its objects are new (never linked to the template or other slides),
+   * except a theme's role objects, which keep one ID per theme so layouts of a theme morph.
+   */
   insertTemplate(tpl, at) {
     const page = fitPage(deepClone(tpl.page), tpl.w || 1920, tpl.h || 1080, this.project.width, this.project.height);
     page.id = newId();
-    const map = freshIds(page, this.project);
+    const map = freshIds(page, this.project, (id) => !parseRoleId(id));
+    if (tpl.theme) {
+      for (const id of allLeafIds(page)) if (parseRoleId(id)) this.registerRole(id);
+      if ((this.project.settings || {}).theme !== tpl.theme) this.project.settings = { ...(this.project.settings || {}), theme: tpl.theme };
+    }
     const sl = { id: page.id, page, anim: remapAnim(tpl.anim, map) };
     const idx = Math.max(0, Math.min(at, this.project.slides.length));
     this.project.slides.splice(idx, 0, sl);
@@ -1355,6 +1370,99 @@ export class Controller {
     this.liveTouch([sl.id]);
     this.markDirty();
     this.emitNow();
+  }
+
+  /** Give a theme role object its registry entry (a readable ID such as OCEAN-TITLE). */
+  registerRole(id) {
+    this.project.objects = this.project.objects || {};
+    if (this.project.objects[id]) return;
+    const r = parseRoleId(id);
+    let name = normalizeId(`${r.theme}-${r.role}`);
+    const owner = idByName(this.project, name);
+    if (owner && owner !== id) name = makeName(nameTaken(this.project));
+    this.project.objects[id] = { name };
+  }
+
+  // ---- project settings and themes ----------------------------------------------------------
+  get settings() { return (this.project && this.project.settings) || {}; }
+  get theme() { return themeById(this.settings.theme); }
+
+  setSettings(patch) {
+    if (!this.project) return;
+    this.project.settings = { ...this.settings, ...patch };
+    this.liveTouch([]);
+    this.markDirty();
+    this.emitNow();
+  }
+
+  /** "+" opens the theme's layouts once a theme is chosen, else adds a blank slide. */
+  newSlideAt(at) {
+    if (this.theme) this.setUi({ tplAt: at });
+    else this.addSlide(at);
+  }
+
+  /** Slides made with a theme (they hold one of its role objects or its background). */
+  themeSlides(themeId) {
+    const T = themeById(themeId);
+    if (!T || !this.project) return [];
+    return this.project.slides.map((sl, k) => {
+      const ids = allLeafIds(sl.page);
+      const has = ROLES.some((r) => ids.has(roleId(themeId, r)));
+      const bg = String(sl.page.background || '').toLowerCase() === T.paper;
+      return has || bg ? k : -1;
+    }).filter((k) => k >= 0);
+  }
+
+  /** Choose the project theme; with restyle, slides made with the old theme switch to the new one. */
+  setTheme(id, { restyle = false } = {}) {
+    const from = this.theme;
+    const to = themeById(id);
+    if (restyle && from && to && from.id !== to.id) this.restyleTheme(from, to);
+    this.setSettings({ theme: to ? to.id : null });
+  }
+
+  restyleTheme(A, B) {
+    const colors = new Map();
+    for (const k of COLOR_TOKENS) { const c = A[k].toLowerCase(); if (!colors.has(c)) colors.set(c, B[k]); }
+    const fonts = new Map([[A.body, [B.body, null]], [A.head, [B.head, B.hw]]]);
+    const s = Math.min(this.project.width / 1920, this.project.height / 1080);
+    const ids = new Map(ROLES.map((r) => [roleId(A.id, r), roleId(B.id, r)]));
+    const touched = [];
+    for (const k of this.themeSlides(A.id)) {
+      const sl = this.project.slides[k];
+      const page = deepClone(sl.page);
+      if (String(page.background || '').toLowerCase() === A.paper) page.background = B.paper;
+      const walk = (ch) => {
+        for (const el of ch || []) {
+          if (el.children) walk(el.children);
+          for (const p of ['fill', 'stroke']) {
+            const c = typeof el[p] === 'string' && colors.get(el[p].toLowerCase());
+            if (c) el[p] = c;
+          }
+          if (el.type === 'text' && fonts.has(el.fontFamily)) {
+            const [f, w] = fonts.get(el.fontFamily);
+            if (w && el.fontFamily === A.head && el.fontWeight === A.hw) el.fontWeight = w;
+            el.fontFamily = f;
+          }
+          const role = parseRoleId(el.id);
+          if (role && role.theme === A.id && (role.role === 'deco1' || role.role === 'deco2')) el.cornerRadius = decoRadius(B.shape, el.width || 0);
+          else if (el.type === 'figure' && typeof el.cornerRadius === 'number' && Math.abs(el.cornerRadius - A.radius * s) < 0.5) el.cornerRadius = B.radius * s;
+          if (ids.has(el.id)) el.id = ids.get(el.id);
+        }
+      };
+      walk(page.children);
+      const anim = {};
+      for (const [id, v] of Object.entries(sl.anim || {})) anim[ids.get(id) || id] = v;
+      sl.page = page;
+      sl.anim = anim;
+      touched.push(sl.id);
+    }
+    for (const nid of ids.values()) if (this.project.slides.some((sl) => findRaw(sl.page, nid))) this.registerRole(nid);
+    if (touched.length) {
+      this.loadSlide(this.active);
+      this.liveTouch(touched);
+      this.toast(`${touched.length} slide${touched.length > 1 ? 's' : ''} restyled with ${B.name}`, 'success');
+    }
   }
 
   markDirty() {
@@ -1387,10 +1495,11 @@ export class Controller {
     this.emitNow();
   }
 
-  addSlide(at) {
+  addSlide(at, opts = {}) {
     const s = { id: null, page: blankPage(), anim: {} };
     const cur = this.project.slides[this.active];
-    if (cur && cur.page && cur.page.background) s.page.background = cur.page.background;
+    if (opts.background) s.page.background = opts.background;
+    else if (cur && cur.page && cur.page.background) s.page.background = cur.page.background;
     s.id = s.page.id;
     this.project.slides.splice(at, 0, s);
     this.active = at;

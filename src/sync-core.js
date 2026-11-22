@@ -233,7 +233,7 @@ export function applyList(list, ops) {
 export const listOpsEmpty = (o) => !o || (!o.ins.length && !o.del.length);
 
 // --- project-level data (slide order, title, size, fonts, object names) ---------
-const META_FIELDS = ['title', 'width', 'height', 'fonts'];
+const META_FIELDS = ['title', 'width', 'height', 'fonts', 'settings'];
 export function diffMeta(a, b) {
   const fields = {};
   for (const k of META_FIELDS) if (!same(a[k], b[k], k)) fields[k] = clone(b[k]);
