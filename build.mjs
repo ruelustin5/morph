@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import * as esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';
@@ -26,6 +27,8 @@ fs.mkdirSync('build', { recursive: true });
 await esbuild.build({ ...common, entryPoints: ['src/export-entry.js'], outfile: 'build/player.txt', format: 'iife' });
 // 2) the app
 await esbuild.build({ ...common, entryPoints: { app: 'src/main.jsx' }, outdir: OUT, format: 'iife' });
+// A content hash in the file links, so browsers load the new version right after each deploy.
+const ver = (f) => crypto.createHash('sha1').update(fs.readFileSync(`${OUT}/${f}`)).digest('hex').slice(0, 10);
 fs.writeFileSync(`${OUT}/index.html`, `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,11 +39,11 @@ ${WEB ? '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=${ver('app.css')}">
 </head>
 <body>
 <div id="root"></div>
-<script src="app.js"></script>
+<script src="app.js?v=${ver('app.js')}"></script>
 </body>
 </html>
 `);
