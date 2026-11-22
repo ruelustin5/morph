@@ -233,20 +233,24 @@ export function applyList(list, ops) {
 export const listOpsEmpty = (o) => !o || (!o.ins.length && !o.del.length);
 
 // --- project-level data (slide order, title, size, fonts, object names) ---------
-const META_FIELDS = ['title', 'width', 'height', 'fonts', 'settings'];
+const META_FIELDS = ['title', 'width', 'height', 'fonts'];
+// Merged key by key, so two people changing different slides' notes (or different settings) both win.
+export const META_MAPS = ['objects', 'settings', 'notes', 'owners'];
 export function diffMeta(a, b) {
   const fields = {};
   for (const k of META_FIELDS) if (!same(a[k], b[k], k)) fields[k] = clone(b[k]);
-  return { order: diffList(a.order || [], b.order || []), fields, objects: diffMap(a.objects || {}, b.objects || {}) };
+  const out = { order: diffList(a.order || [], b.order || []), fields };
+  for (const k of META_MAPS) out[k] = diffMap(a[k] || {}, b[k] || {});
+  return out;
 }
 export function applyMeta(m, ops) {
   const out = { ...m };
   out.order = applyList(m.order || [], ops.order);
   for (const [k, v] of Object.entries(ops.fields || {})) out[k] = clone(v);
-  out.objects = applyMap(m.objects || {}, ops.objects);
+  for (const k of META_MAPS) out[k] = applyMap(m[k] || {}, ops[k]);
   return out;
 }
-export const metaOpsEmpty = (o) => listOpsEmpty(o.order) && !Object.keys(o.fields).length && mapOpsEmpty(o.objects);
+export const metaOpsEmpty = (o) => listOpsEmpty(o.order) && !Object.keys(o.fields).length && META_MAPS.every((k) => mapOpsEmpty(o[k]));
 
 /** Two objects must never share a name: deterministic fix every screen computes identically. */
 export function dedupeNames(objects) {

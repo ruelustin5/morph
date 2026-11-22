@@ -10,10 +10,13 @@ import { setTranslations } from 'opn/utils/l10n';
 import { setGoogleFonts } from 'opn/utils/fonts';
 import { createStore } from 'opn/model/store';
 import { EN } from './i18n-en';
+import { EDITOR_FR } from './i18n-editor-fr';
+import { LANG } from './i18n';
 import { Controller } from './controller';
 import { App } from './App';
 
 setTranslations(EN);
+if (LANG === 'fr') setTranslations(EDITOR_FR);
 setGoogleFonts([
   'Roboto', 'Inter', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Raleway', 'Oswald', 'Nunito', 'Work Sans',
   'DM Sans', 'Manrope', 'Outfit', 'Sora', 'Space Grotesk', 'Rubik', 'Source Sans 3', 'Playfair Display',

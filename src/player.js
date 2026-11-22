@@ -118,6 +118,19 @@ const ICONS = {
   laser: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
 };
 
+// The player also runs in exported files, so it carries its own few French words.
+const PFR = {
+  Next: 'Suivante', Previous: 'Précédente', 'Black screen': 'Écran noir', 'White screen': 'Écran blanc',
+  'Laser pointer': 'Pointeur laser', 'Full screen': 'Plein écran', 'First / last': 'Première / dernière', Exit: 'Quitter',
+  'Previous slide': 'Diapo précédente', 'Next slide': 'Diapo suivante', Shortcuts: 'Raccourcis',
+  'Previous (←)': 'Précédente (←)', 'Next (→ / space / click)': 'Suivante (→ / espace / clic)', 'Shortcuts (?)': 'Raccourcis (?)',
+  'Laser pointer (L)': 'Pointeur laser (L)', 'Full screen (F)': 'Plein écran (F)', 'Exit (Esc)': 'Quitter (Échap)',
+};
+const pt = (s) => {
+  let fr = false;
+  try { const l = (document.documentElement.lang || navigator.language || '').toLowerCase(); fr = l.startsWith('fr'); } catch (e) { /* ignore */ }
+  return (fr && PFR[s]) || s;
+};
 const HELP = [
   ['→ Space PgDn', 'Next'], ['← PgUp', 'Previous'], ['B  .', 'Black screen'], ['W  ,', 'White screen'],
   ['L', 'Laser pointer'], ['F', 'Full screen'], ['Home End', 'First / last'], ['Esc', 'Exit'],
@@ -142,14 +155,14 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   view.appendChild(progress);
   const ui = document.createElement('div');
   ui.className = 'mp-ui';
-  ui.innerHTML = `<button class="mp-btn" data-a="prev" aria-label="Previous slide" title="Previous (←)">${ICONS.prev}</button>` +
+  ui.innerHTML = `<button class="mp-btn" data-a="prev" aria-label="${pt('Previous slide')}" title="${pt('Previous (←)')}">${ICONS.prev}</button>` +
     `<span class="mp-count"></span>` +
-    `<button class="mp-btn" data-a="next" aria-label="Next slide" title="Next (→ / space / click)">${ICONS.next}</button>` +
+    `<button class="mp-btn" data-a="next" aria-label="${pt('Next slide')}" title="${pt('Next (→ / space / click)')}">${ICONS.next}</button>` +
     `<span class="mp-sep"></span>` +
-    `<button class="mp-btn" data-a="help" aria-label="Shortcuts" title="Shortcuts (?)"><b style="font-size:15px">?</b></button>` +
-    `<button class="mp-btn" data-a="laser" aria-label="Laser pointer" aria-pressed="false" title="Laser pointer (L)">${ICONS.laser}</button>` +
-    `<button class="mp-btn" data-a="full" aria-label="Full screen" title="Full screen (F)">${ICONS.full}</button>` +
-    (onExit ? `<button class="mp-btn" data-a="exit" aria-label="Exit" title="Exit (Esc)">${ICONS.exit}</button>` : '');
+    `<button class="mp-btn" data-a="help" aria-label="${pt('Shortcuts')}" title="${pt('Shortcuts (?)')}"><b style="font-size:15px">?</b></button>` +
+    `<button class="mp-btn" data-a="laser" aria-label="${pt('Laser pointer')}" aria-pressed="false" title="${pt('Laser pointer (L)')}">${ICONS.laser}</button>` +
+    `<button class="mp-btn" data-a="full" aria-label="${pt('Full screen')}" title="${pt('Full screen (F)')}">${ICONS.full}</button>` +
+    (onExit ? `<button class="mp-btn" data-a="exit" aria-label="${pt('Exit')}" title="${pt('Exit (Esc)')}">${ICONS.exit}</button>` : '');
   view.appendChild(ui);
   const veil = document.createElement('div');
   veil.className = 'mp-veil';
@@ -159,7 +172,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   view.appendChild(dot);
   const help = document.createElement('div');
   help.className = 'mp-help';
-  help.innerHTML = HELP.map(([k, v]) => `<div><span>${k.split(/\s+/).map((x) => `<kbd>${x}</kbd>`).join('')}</span><span>${v}</span></div>`).join('');
+  help.innerHTML = HELP.map(([k, v]) => `<div><span>${k.split(/\s+/).map((x) => `<kbd>${x}</kbd>`).join('')}</span><span>${pt(v)}</span></div>`).join('');
   view.appendChild(help);
   root.appendChild(view);
 

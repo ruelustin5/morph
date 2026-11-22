@@ -65,7 +65,7 @@ export const LATEX_PACKAGES = [
   { id: 'amscd', mj: 'amscd', desc: 'Commutative diagrams', ex: '\\begin{CD} A @>f>> B \\end{CD}' },
   { id: 'colortbl', mj: 'colortbl', desc: 'Colored table cells', ex: '\\begin{array}{c}\\rowcolor{yellow} x\\end{array}' },
   {
-    id: 'siunitx', desc: 'Units (simple version): \\qty, \\SI, \\si, \\num', ex: '\\qty{9.81}{\\meter\\per\\second\\squared}',
+    id: 'siunitx', desc: 'Units (simple version): \\qty, \\SI, \\si, \\num. Its \\qty replaces the one from physics.', ex: '\\qty{9.81}{\\meter\\per\\second\\squared}',
     macros: {
       SI: ['#1\\,\\mathrm{#2}', 2], qty: ['#1\\,\\mathrm{#2}', 2], si: ['\\mathrm{#1}', 1], unit: ['\\mathrm{#1}', 1], num: ['#1', 1], ang: ['#1^{\\circ}', 1],
       per: '/', squared: '^{2}', cubed: '^{3}',

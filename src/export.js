@@ -17,6 +17,8 @@ function loadSize(src) {
 
 export async function buildExportHtml(project, ctx) {
   const p = deepClone(project);
+  // Speaker notes, slide owners and names stay in the app: the exported file is for the audience.
+  delete p.notes; delete p.owners; delete p.settings; delete p.objects;
   // Resolve SVG color replacements to final images so the player needs no SVG tooling.
   const walk = (children) => {
     for (const el of children || []) {

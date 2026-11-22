@@ -4,6 +4,8 @@
 // full-screen cover, the title moves and resizes…). Everything else fades in and out.
 // Layouts are drawn at 1920×1080 and fitted to the project size when inserted.
 
+import { t } from './i18n';
+
 const W = 1920, H = 1080, M = 160;
 
 export const THEMES = [
@@ -83,7 +85,8 @@ const tmpId = () => 'x' + (++seq);
 function estLines(str, size, w) {
   return String(str).split('\n').reduce((n, line) => n + Math.max(1, Math.ceil((line.length * size * 0.52) / Math.max(1, w))), 0);
 }
-function text(T, str, x, y, w, size, o = {}) {
+function text(T, str0, x, y, w, size, o = {}) {
+  const str = t(str0);
   const lh = o.lh || 1.25;
   return {
     id: o.id || tmpId(), type: 'text', text: str, x, y, width: w, height: Math.round(size * lh * estLines(str, size, w)),

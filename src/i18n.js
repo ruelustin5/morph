@@ -1,6 +1,7 @@
 // Interface language: French when the browser prefers French, English otherwise.
 // Strings are written in English in the code and looked up in the French dictionary (i18n-fr.js).
 // Placeholders: t('Slide {n}', { n: 3 }).
+import { createElement, Fragment } from 'react';
 import { FR } from './i18n-fr';
 
 function pickLang() {
@@ -35,6 +36,16 @@ export function t(s, vars) {
 /** "1 slide" / "3 slides" style counts. */
 export function tn(n, one, many, vars = {}) {
   return t(n === 1 ? one : many, { n, ...vars });
+}
+
+/** Like t(), but placeholders can be React elements (bold names, links…). */
+export function tj(s, vars = {}) {
+  const str = t(s);
+  const parts = str.split(/(\{\w+\})/g).map((part) => {
+    const m = /^\{(\w+)\}$/.exec(part);
+    return m && vars[m[1]] != null ? vars[m[1]] : part;
+  });
+  return createElement(Fragment, null, ...parts);
 }
 
 export function setLang(l) {

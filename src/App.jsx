@@ -14,7 +14,7 @@ import { useController } from './ui/hooks';
 import { SlideSorter } from './ui/SlideSorter';
 import { AnimPanel } from './ui/AnimPanel';
 import { Presenter } from './ui/Presenter';
-import { fmtTime } from './controller';
+import { fmtTime, TARGET } from './controller';
 import { ProjectsDialog } from './ui/ProjectsDialog';
 import { Avatar, AvatarStack, MotionIcon } from './ui/People';
 import { VersionHistory } from './ui/VersionHistory';
@@ -26,6 +26,9 @@ import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
+import { NotesBar } from './ui/Notes';
+import { PhotosSection, IconsSection, bindOnline } from './ui/OnlinePanels';
+import { t, tn, tj, LANG, setLang } from './i18n';
 
 // Duplicate / delete / position are on the selection's own bar and in the right-click menu.
 const Nothing = () => null;
@@ -43,6 +46,8 @@ const SECTIONS = DEFAULT_SECTIONS
   .filter((s) => ['text', 'elements', 'upload', 'background', 'layers', 'size'].includes(s.name))
   .map((s) => (s.name === 'text' ? OfflineTextSection : s.name === 'background' ? OfflineBackgroundSection : s));
 SECTIONS.splice(SECTIONS.findIndex((s) => s.name === 'elements') + 1, 0, EquationSection);
+// The website version can reach free online libraries (an artifact page cannot).
+if (TARGET === 'web') SECTIONS.splice(SECTIONS.findIndex((s) => s.name === 'equation') + 1, 0, PhotosSection, IconsSection);
 const SECTIONS_T = SECTIONS.map(toggleTab);
 
 const NoPageControls = () => null;
@@ -55,15 +60,15 @@ function SaveStatus({ c }) {
   if (c.newerSave) {
     return (
       <button type="button" className="save-status is-newer" onClick={() => { c.wantNewer = true; c.emitNow(); }}>
-        <Icon icon="refresh" size={12} /><span>Newer version saved by {c.whoSaved(c.newerSave)}</span>
+        <Icon icon="refresh" size={12} /><span>{t('Newer version saved by {name}', { name: c.whoSaved(c.newerSave) })}</span>
       </button>
     );
   }
   if (c.live && !c.saving) {
     const st = c.readOnlyView ? 'readonly' : c.liveStatus || 'synced';
     const map = {
-      synced: ['cloud-tick', 'Saved'], syncing: [null, 'Saving…'],
-      offline: ['offline', 'Offline, retrying'], readonly: ['eye-open', 'View only'],
+      synced: ['cloud-tick', t('Saved')], syncing: [null, t('Saving…')],
+      offline: ['offline', t('Offline, retrying')], readonly: ['eye-open', t('View only')],
     };
     const [ic, text] = map[st] || map.synced;
     return (
@@ -88,24 +93,24 @@ function BackupsMenu({ c, onOpenFile, onRestore }) {
   const saves = c.saves || [];
   return (
     <Menu className="backups-menu">
-      <li className={Classes.MENU_HEADER}><h6 className={Classes.HEADING}>Saved versions <span className="muted">(the 3 newest are kept)</span></h6></li>
-      {saves.length === 0 && <MenuItem disabled text="Nothing saved yet" />}
+      <li className={Classes.MENU_HEADER}><h6 className={Classes.HEADING}>{t('Saved versions')} <span className="muted">{t('(the 3 newest are kept)')}</span></h6></li>
+      {saves.length === 0 && <MenuItem disabled text={t('Nothing saved yet')} />}
       {saves.map((s, k) => (
         <MenuItem
           key={s.slot + s.savedAt}
           icon={k === 0 ? 'floppy-disk' : 'history'}
-          text={<span>{k === 0 ? 'Latest' : `Backup ${k}`} <span className="muted">({s.slides} slide{s.slides === 1 ? '' : 's'})</span></span>}
+          text={<span>{k === 0 ? t('Latest') : t('Backup {k}', { k })} <span className="muted">({tn(s.slides, '1 slide', '{n} slides')})</span></span>}
           label={fmtTime(s.savedAt)}
           onClick={() => onRestore(s)}
         />
       ))}
       <MenuDivider />
-      <MenuItem icon="download" text="Download project file (.json)" onClick={async () => {
+      <MenuItem icon="download" text={t('Download project file (.json)')} onClick={async () => {
         const r = await c.exportProjectFile();
-        if (r.ok) c.toast('Project file downloaded', 'success');
-        else if (r.reason !== 'declined') c.toast('Downloads are not available here.', 'warning');
+        if (r.ok) c.toast(t('Project file downloaded'), 'success');
+        else if (r.reason !== 'declined') c.toast(t('Downloads are not available here.'), 'warning');
       }} />
-      <MenuItem icon="folder-open" text="Open project file…" onClick={onOpenFile} />
+      <MenuItem icon="folder-open" text={t('Open project file…')} onClick={onOpenFile} />
     </Menu>
   );
 }
@@ -119,7 +124,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
     <header className="topbar">
       <div className="brand"><Logo /><span className="brand-name">Morph</span></div>
       <span className="topbar-sep" />
-      <Tooltip content={c.isOwner ? 'Your projects' : 'Projects shared with you'} placement="bottom-start" compact>
+      <Tooltip content={c.isOwner ? t('Your projects') : t('Projects shared with you')} placement="bottom-start" compact>
         <Button minimal icon={c.isOwner ? 'home' : 'people'} text={c.spaceName()} className="projects-btn" onClick={onProjects} disabled={!p && c.isOwner} />
       </Tooltip>
       <Icon icon="chevron-right" size={12} className="muted crumb" />
@@ -128,16 +133,16 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           className="title-edit"
           key={p.title}
           defaultValue={p.title}
-          placeholder="Untitled presentation"
+          placeholder={t('Untitled presentation')}
           maxLength={80}
           selectAllOnFocus
           onConfirm={(v) => { if ((v || '').trim() !== p.title) c.setTitle((v || '').trim()); }}
         />
       )}
       {p && c.isOwner && c.canShare && (
-        <Tooltip content={c.projectShared ? 'Shared · manage who can open it' : 'Private · share it'} placement="bottom" compact>
+        <Tooltip content={c.projectShared ? t('Shared: manage who can open it') : t('Private: share it')} placement="bottom" compact>
           <Button small minimal icon={c.projectShared ? 'people' : 'lock'} className={'share-chip' + (c.projectShared ? ' is-shared' : '')}
-            text={c.projectShared ? 'Shared' : null} onClick={onShare} aria-label="Share" />
+            text={c.projectShared ? t('Shared') : null} onClick={onShare} aria-label={t('Share')} />
         </Tooltip>
       )}
       <div className="topbar-spacer" />
@@ -146,12 +151,12 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           {c.othersIn(c.projectId).length > 0 && (
             <AvatarStack c={c} peers={c.othersIn(c.projectId)} describe={(x) => {
               const k = c.project.slides.findIndex((s) => s.id === x.presence.slide);
-              return k >= 0 ? `slide ${k + 1}` : '';
+              return k >= 0 ? t('slide {n}', { n: k + 1 }) : '';
             }} />
           )}
           {c.room && (
-            <Tooltip content={c.myName() ? `You: ${c.myName()}${c.me && c.me.name ? '' : ' (click to change)'}` : 'Set your name'} placement="bottom" compact>
-              <button type="button" className="me-chip" onClick={() => { if (!(c.me && c.me.name)) { c.needsName = true; c.emitNow(); } }} aria-label="Your name">
+            <Tooltip content={c.myName() ? (c.me && c.me.name ? t('You: {name}', { name: c.myName() }) : t('You: {name} (click to change)', { name: c.myName() })) : t('Set your name')} placement="bottom" compact>
+              <button type="button" className="me-chip" onClick={() => { if (!(c.me && c.me.name)) { c.needsName = true; c.emitNow(); } }} aria-label={t('Your name')}>
                 <Avatar person={{ name: c.myName() || '?', color: (c.me && c.me.color) || '#5f6b7c', avatar: c.me && c.me.avatarUrl && !c.me.avatarUrl.startsWith('data:') ? c.me.avatarUrl : null }} size={26} ring="#f0f4f9" />
               </button>
             </Tooltip>
@@ -160,76 +165,78 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
       )}
       <SaveStatus c={c} />
       {c.live ? (
-        <Tooltip content="Version history" placement="bottom" compact>
-          <Button minimal icon="history" aria-label="Version history" onClick={onHistory} disabled={!p} />
+        <Tooltip content={t('Version history')} placement="bottom" compact>
+          <Button minimal icon="history" aria-label={t('Version history')} onClick={onHistory} disabled={!p} />
         </Tooltip>
       ) : (
         <ButtonGroup className="save-group">
-          <Tooltip content="Save (Ctrl+S)" placement="bottom" compact>
-            <Button icon="floppy-disk" text="Save" intent={c.dirty ? 'primary' : 'none'} disabled={c.saving || !p} onClick={() => c.save()} />
+          <Tooltip content={t('Save (Ctrl+S)')} placement="bottom" compact>
+            <Button icon="floppy-disk" text={t('Save')} intent={c.dirty ? 'primary' : 'none'} disabled={c.saving || !p} onClick={() => c.save()} />
           </Tooltip>
           <Popover content={<BackupsMenu c={c} onOpenFile={() => fileRef.current && fileRef.current.click()} onRestore={setRestore} />}
             placement="bottom-end" minimal onOpening={() => c.refreshSaves()}>
-            <Button icon="history" aria-label="Backups" />
+            <Button icon="history" aria-label={t('Backups')} />
           </Popover>
         </ButtonGroup>
       )}
       <Popover placement="bottom-end" minimal content={
         <Menu>
-          <MenuItem icon="download" text="Download project file" onClick={async () => {
+          <MenuItem icon="download" text={t('Download project file')} onClick={async () => {
             const r = await c.exportProjectFile();
-            if (r.ok) c.toast('Project file downloaded', 'success');
-            else if (r.reason !== 'declined') c.toast('Downloads are not available here.', 'warning');
+            if (r.ok) c.toast(t('Project file downloaded'), 'success');
+            else if (r.reason !== 'declined') c.toast(t('Downloads are not available here.'), 'warning');
           }} />
-          {c.isOwner && <MenuItem icon="folder-open" text="Open project file…" onClick={() => fileRef.current && fileRef.current.click()} />}
+          {c.isOwner && <MenuItem icon="folder-open" text={t('Open project file…')} onClick={() => fileRef.current && fileRef.current.click()} />}
+          <MenuItem icon="translate" text={LANG === 'fr' ? 'English' : 'Français'} onClick={() => setLang(LANG === 'fr' ? 'en' : 'fr')} />
+          <MenuItem icon="help" text={t('Take the tour')} onClick={() => c.setUi({ tour: 0 })} />
           {typeof window !== 'undefined' && window.__web && window.__web.configured && (c.isOwner
-            ? <MenuItem icon="log-out" text="Sign out" onClick={async () => { await window.__web.signOut(); window.location.reload(); }} />
-            : <MenuItem icon="log-in" text="This is my space: sign in" onClick={async () => {
-                try { const r = await window.__web.signInOwner(); if (r.owner) window.location.reload(); else c.toast('This space belongs to someone else.', 'warning'); }
-                catch (e) { c.toast('Sign-in did not finish: ' + ((e && e.message) || e), 'warning'); }
+            ? <MenuItem icon="log-out" text={t('Sign out')} onClick={async () => { await window.__web.signOut(); window.location.reload(); }} />
+            : <MenuItem icon="log-in" text={t('This is my space: sign in')} onClick={async () => {
+                try { const r = await window.__web.signInOwner(); if (r.owner) window.location.reload(); else c.toast(t('This space belongs to someone else.'), 'warning'); }
+                catch (e) { c.toast(t('Sign-in did not finish: ') + ((e && e.message) || e), 'warning'); }
               }} />)}
         </Menu>
       }>
-        <Button minimal icon="more" aria-label="More" disabled={!p} />
+        <Button minimal icon="more" aria-label={t('More')} disabled={!p} />
       </Popover>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={async (e) => {
         const f = e.target.files && e.target.files[0];
         e.target.value = '';
         if (!f) return;
-        try { await c.importProjectFile(await f.text()); c.toast('Imported as a new project', 'success'); }
-        catch (err) { c.toast('Could not open that file: ' + (err.message || err), 'danger'); }
+        try { await c.importProjectFile(await f.text()); c.toast(t('Imported as a new project'), 'success'); }
+        catch (err) { c.toast(t('Could not open that file: ') + (err.message || err), 'danger'); }
       }} />
       <span className="topbar-sep" />
       <ButtonGroup className="present-group">
-        <Button className="present-btn" icon="play" text="Present" onClick={() => onPresent(0)} disabled={!p} />
+        <Button className="present-btn" icon="play" text={t('Present')} onClick={() => onPresent(0)} disabled={!p} />
         <Popover placement="bottom-end" minimal content={
           <Menu>
-            <MenuItem icon="fast-backward" text="From the beginning" onClick={() => onPresent(0)} />
-            <MenuItem icon="play" text={`From slide ${c.active + 1}`} onClick={() => onPresent(c.active)} />
+            <MenuItem icon="fast-backward" text={t('From the beginning')} onClick={() => onPresent(0)} />
+            <MenuItem icon="play" text={t('From slide {n}', { n: c.active + 1 })} onClick={() => onPresent(c.active)} />
           </Menu>
         }>
-          <Button icon="caret-down" aria-label="Present options" disabled={!p} />
+          <Button icon="caret-down" aria-label={t('Present options')} disabled={!p} />
         </Popover>
       </ButtonGroup>
-      <Tooltip content="Download the presentation as one standalone .html file" placement="bottom-end" compact>
-        <Button icon="export" text="Export" intent="primary" loading={exporting} onClick={onExport} disabled={!p} />
+      <Tooltip content={t('Download the presentation as one standalone .html file')} placement="bottom-end" compact>
+        <Button icon="export" text={t('Export')} intent="primary" loading={exporting} onClick={onExport} disabled={!p} />
       </Tooltip>
-      <Tooltip content={animOpen ? 'Hide the animation panel' : 'Show the animation panel'} placement="bottom-end" compact>
-        <Button icon={<MotionIcon />} text="Animation" className="anim-toggle" minimal active={animOpen} onClick={onToggleAnim} aria-label="Toggle animation panel" aria-pressed={animOpen} />
+      <Tooltip content={animOpen ? t('Hide the animation panel') : t('Show the animation panel')} placement="bottom-end" compact>
+        <Button icon={<MotionIcon />} text={t('Animation')} className="anim-toggle" minimal active={animOpen} onClick={onToggleAnim} aria-label={t('Toggle animation panel')} aria-pressed={animOpen} />
       </Tooltip>
       <Alert
         isOpen={!!restore}
         icon="history"
-        cancelButtonText="Cancel"
-        confirmButtonText="Open this save"
+        cancelButtonText={t('Cancel')}
+        confirmButtonText={t('Open this save')}
         onCancel={() => setRestore(null)}
         onConfirm={() => { const s = restore; setRestore(null); c.restoreSave(s); }}
       >
-        <p>{c.live ? 'Restore' : 'Open'} the version from <b>{restore && fmtTime(restore.savedAt)}</b>?</p>
+        <p>{tj(c.live ? 'Restore the version from {when}?' : 'Open the version from {when}?', { when: <b>{restore && fmtTime(restore.savedAt)}</b> })}</p>
         {c.live
-          ? <p>The project goes back to that version for everyone working on it.{c.othersIn(c.projectId).length ? ' Others are editing right now.' : ''}</p>
-          : c.dirty && <p>Your current unsaved changes will be replaced.</p>}
-        <p className="muted">Nothing is deleted: the other saved copies stay available.</p>
+          ? <p>{t('The project goes back to that version for everyone working on it.')}{c.othersIn(c.projectId).length ? ' ' + t('Others are editing right now.') : ''}</p>
+          : c.dirty && <p>{t('Your current unsaved changes will be replaced.')}</p>}
+        <p className="muted">{t('Nothing is deleted: the other saved copies stay available.')}</p>
       </Alert>
     </header>
   );
@@ -239,6 +246,7 @@ export const App = observer(function App({ c, store }) {
   useController(c);
   STORE = store;
   bindEquations(c);
+  bindOnline(c);
   const toasterRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [presenting, setPresenting] = useState(null);
@@ -294,11 +302,11 @@ export const App = observer(function App({ c, store }) {
     setExporting(true);
     try {
       const r = await c.exportHtml();
-      if (r.ok) c.toast(`Exported ${r.name}`, 'success');
+      if (r.ok) c.toast(t('Exported {name}', { name: r.name }), 'success');
       else if (r.reason === 'declined') { /* viewer said no */ }
       else setExportFallback(r);
     } catch (e) {
-      c.toast('Export failed: ' + (e.message || e), 'danger');
+      c.toast(t('Export failed: ') + (e.message || e), 'danger');
     } finally {
       setExporting(false);
     }
@@ -311,66 +319,69 @@ export const App = observer(function App({ c, store }) {
         onShare={() => setShareId(c.projectId)} />
       <div className={'main' + (animOpen ? '' : ' no-anim')}>
         <SlideSorter c={c} />
-        <div className="editor" ref={editorRef}>
-          <RaeditorContainer className="editor-host">
-            <SidePanelWrap><SidePanel store={store} sections={SECTIONS_T} defaultSection="" /></SidePanelWrap>
-            <WorkspaceWrap>
-              <Toolbar store={store} components={TOOLBAR_COMPONENTS} />
-              <Workspace store={store} pageControlsEnabled={false} components={wsComponents} onKeyDown={onEditorKey} backgroundColor="#f0f4f9" />
-              <ZoomButtons store={store} />
-            </WorkspaceWrap>
-          </RaeditorContainer>
+        <div className="editor-col">
+          <div className="editor" ref={editorRef}>
+            <RaeditorContainer className="editor-host">
+              <SidePanelWrap><SidePanel store={store} sections={SECTIONS_T} defaultSection="" /></SidePanelWrap>
+              <WorkspaceWrap>
+                <Toolbar store={store} components={TOOLBAR_COMPONENTS} />
+                <Workspace store={store} pageControlsEnabled={false} components={wsComponents} onKeyDown={onEditorKey} backgroundColor="#f0f4f9" />
+                <ZoomButtons store={store} />
+              </WorkspaceWrap>
+            </RaeditorContainer>
+          </div>
+          {c.project && <NotesBar c={c} />}
         </div>
         <AnimPanel c={c} />
       </div>
       {(!ready || c.busy) && (
         <div className="boot">
           <Spinner size={28} />
-          <div>Opening your presentation…</div>
+          <div>{t('Opening your presentation…')}</div>
         </div>
       )}
       <ProjectsDialog c={c} isOpen={projectsOpen} onClose={() => setProjectsOpen(false)} onShare={(id) => { setProjectsOpen(false); setShareId(id); }} />
       {shareId && <ShareDialog c={c} projectId={shareId} onClose={() => setShareId(null)} />}
       {ready && !c.project && !c.isOwner && !c.busy && <JoinScreen c={c} />}
       {typeof window !== 'undefined' && window.__web && !window.__web.configured && (
-        <div className="setup-banner"><Icon icon="warning-sign" size={14} /> Firebase isn’t set up yet: projects are saved in this browser only (see SETUP.md).</div>
+        <div className="setup-banner"><Icon icon="warning-sign" size={14} /> {t('Firebase isn’t set up yet: projects are saved in this browser only (see SETUP.md).')}</div>
       )}
       {historyOpen && <VersionHistory c={c} onClose={() => setHistoryOpen(false)} />}
       <SaveTemplateDialog c={c} />
       <TemplateGallery c={c} />
-      <Dialog isOpen={!!(ready && c.needsName)} title="What’s your name?" icon="user" isCloseButtonShown={!!c.myName()} canEscapeKeyClose={!!c.myName()} canOutsideClickClose={false}
+      <Dialog isOpen={!!(ready && c.needsName)} title={t('What’s your name?')} icon="user" isCloseButtonShown={!!c.myName()} canEscapeKeyClose={!!c.myName()} canOutsideClickClose={false}
         onClose={() => { c.needsName = false; c.emitNow(); }} className="name-dialog">
         <form onSubmit={(e) => { e.preventDefault(); if (nameDraft.trim()) c.setNick(nameDraft); }}>
           <DialogBody>
-            <p className="muted">Shown to people working with you.</p>
-            <InputGroup large autoFocus value={nameDraft} placeholder="Your name" maxLength={40} onChange={(e) => setNameDraft(e.target.value)} />
+            <p className="muted">{t('Shown to people working with you.')}</p>
+            <InputGroup large autoFocus value={nameDraft} placeholder={t('Your name')} maxLength={40} onChange={(e) => setNameDraft(e.target.value)} />
           </DialogBody>
-          <DialogFooter actions={<Button type="submit" intent="primary" text="Continue" disabled={!nameDraft.trim()} />} />
+          <DialogFooter actions={<Button type="submit" intent="primary" text={t('Continue')} disabled={!nameDraft.trim()} />} />
         </form>
       </Dialog>
       <Alert
         isOpen={!!c.saveConflict}
         icon="warning-sign"
         intent="warning"
-        confirmButtonText="Save mine anyway"
-        cancelButtonText="Cancel"
+        confirmButtonText={t('Save mine anyway')}
+        cancelButtonText={t('Cancel')}
         onConfirm={() => c.save({ force: true })}
         onCancel={() => { c.saveConflict = null; c.emitNow(); }}
       >
-        <p><b>{c.saveConflict && c.whoSaved(c.saveConflict)}</b> saved this project at {c.saveConflict && fmtTime(c.saveConflict.savedAt)}, after you opened it.</p>
-        <p>If you save now, your version becomes the latest. Theirs stays available under <b>Backups</b> (clock button).</p>
+        <p>{tj('{who} saved this project at {when}, after you opened it.', { who: <b>{c.saveConflict && c.whoSaved(c.saveConflict)}</b>, when: c.saveConflict && fmtTime(c.saveConflict.savedAt) })}</p>
+        <p>{t('If you save now, your version becomes the latest. Theirs stays available under Backups (clock button).')}</p>
       </Alert>
       <Alert
         isOpen={!!c.wantNewer}
         icon="refresh"
         intent="primary"
-        confirmButtonText="Open the newer version"
-        cancelButtonText="Keep working on mine"
+        confirmButtonText={t('Open the newer version')}
+        cancelButtonText={t('Keep working on mine')}
         onConfirm={() => c.openNewer()}
         onCancel={() => { c.wantNewer = false; c.emitNow(); }}
       >
-        <p><b>{c.newerSave && c.whoSaved(c.newerSave)}</b> saved this project at {c.newerSave && fmtTime(c.newerSave.savedAt)}.</p>
-        {c.dirty ? <p>Opening it replaces your unsaved changes here.</p> : <p>Your screen shows the older version.</p>}
+        <p>{tj('{who} saved this project at {when}.', { who: <b>{c.newerSave && c.whoSaved(c.newerSave)}</b>, when: c.newerSave && fmtTime(c.newerSave.savedAt) })}</p>
+        {c.dirty ? <p>{t('Opening it replaces your unsaved changes here.')}</p> : <p>{t('Your screen shows the older version.')}</p>}
       </Alert>
       {presenting != null && (
         <Presenter c={c} start={presenting} onClose={(i) => { setPresenting(null); c.selectSlide(i); }} />
@@ -379,24 +390,24 @@ export const App = observer(function App({ c, store }) {
         isOpen={!!c.pendingDraft}
         icon="lifesaver"
         intent="primary"
-        confirmButtonText="Restore"
-        cancelButtonText="Discard"
+        confirmButtonText={t('Restore')}
+        cancelButtonText={t('Discard')}
         onConfirm={() => c.restoreDraft()}
         onCancel={() => c.discardDraft()}
       >
-        <p>You have unsaved changes from <b>{c.pendingDraft && fmtTime(c.pendingDraft.at)}</b> (newer than your last save).</p>
-        <p>Restore them?</p>
+        <p>{tj('You have unsaved changes from {when} (newer than your last save).', { when: <b>{c.pendingDraft && fmtTime(c.pendingDraft.at)}</b> })}</p>
+        <p>{t('Restore them?')}</p>
       </Alert>
-      <Dialog isOpen={!!exportFallback} onClose={() => setExportFallback(null)} title="Export" icon="export">
+      <Dialog isOpen={!!exportFallback} onClose={() => setExportFallback(null)} title={t('Export')} icon="export">
         <DialogBody>
-          <p>Downloads are not available in this view, so the file could not be saved directly.</p>
-          <p>Copy the HTML below and paste it into a new file named <code>{exportFallback && exportFallback.name}</code>, then open it in a browser.</p>
+          <p>{t('Downloads are not available in this view, so the file could not be saved directly.')}</p>
+          <p>{tj('Copy the HTML below and paste it into a new file named {name}, then open it in a browser.', { name: <code>{exportFallback && exportFallback.name}</code> })}</p>
         </DialogBody>
         <DialogFooter actions={<>
-          <Button text="Close" onClick={() => setExportFallback(null)} />
-          <Button intent="primary" icon="clipboard" text="Copy HTML" onClick={async () => {
-            try { await navigator.clipboard.writeText(exportFallback.html); c.toast('HTML copied', 'success'); }
-            catch (e) { c.toast('Copy was blocked by the browser.', 'warning'); }
+          <Button text={t('Close')} onClick={() => setExportFallback(null)} />
+          <Button intent="primary" icon="clipboard" text={t('Copy HTML')} onClick={async () => {
+            try { await navigator.clipboard.writeText(exportFallback.html); c.toast(t('HTML copied'), 'success'); }
+            catch (e) { c.toast(t('Copy was blocked by the browser.'), 'warning'); }
           }} />
         </>} />
       </Dialog>

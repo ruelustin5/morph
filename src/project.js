@@ -11,6 +11,7 @@
 import { nanoid } from 'nanoid';
 import { flattenPage } from './render';
 import { DEFAULT_ANIM, animOf } from './player';
+import { t } from './i18n';
 
 export { DEFAULT_ANIM, animOf };
 
@@ -209,8 +210,8 @@ export function demoProject() {
     id: newId(), anim: { [ids.sub]: { exit: { type: 'fade', duration: 0.4, easing: 'ease-out' } } },
     page: { ...blankPage(), background: '#0f1729', children: [
       { id: ids.dot, type: 'figure', subType: 'circle', x: 1380, y: 300, width: 220, height: 220, fill: '#4c90f0', strokeWidth: 0, stroke: '#ffffff', cornerRadius: 0 },
-      { id: ids.title, type: 'text', text: 'Morph slides', x: 200, y: 380, width: 1000, height: 154, fontSize: 128, fontFamily: font, fontWeight: 'bold', fill: '#ffffff', align: 'left', lineHeight: 1.2 },
-      { id: ids.sub, type: 'text', text: 'Same object on two slides = it moves between them.', x: 204, y: 560, width: 1000, height: 58, fontSize: 40, fontFamily: font, fill: '#9fb3d1', align: 'left', lineHeight: 1.2 },
+      { id: ids.title, type: 'text', text: t('Morph slides'), x: 200, y: 380, width: 1000, height: 154, fontSize: 128, fontFamily: font, fontWeight: 'bold', fill: '#ffffff', align: 'left', lineHeight: 1.2 },
+      { id: ids.sub, type: 'text', text: t('Same object on two slides = it moves between them.'), x: 204, y: 560, width: 1000, height: 58, fontSize: 40, fontFamily: font, fill: '#9fb3d1', align: 'left', lineHeight: 1.2 },
     ] },
   };
   s1.id = s1.page.id;
@@ -223,9 +224,9 @@ export function demoProject() {
     },
     page: { ...blankPage(), background: '#0f1729', children: [
       { id: ids.dot, type: 'figure', subType: 'circle', x: -260, y: 140, width: 900, height: 900, fill: '#2d72d2', strokeWidth: 0, stroke: '#ffffff', cornerRadius: 0 },
-      { id: ids.title, type: 'text', text: 'Morph slides', x: 820, y: 220, width: 900, height: 115, fontSize: 96, fontFamily: font, fontWeight: 'bold', fill: '#ffffff', align: 'left', lineHeight: 1.2 },
+      { id: ids.title, type: 'text', text: t('Morph slides'), x: 820, y: 220, width: 900, height: 115, fontSize: 96, fontFamily: font, fontWeight: 'bold', fill: '#ffffff', align: 'left', lineHeight: 1.2 },
       { id: ids.line, type: 'figure', subType: 'rect', x: 824, y: 370, width: 160, height: 10, fill: '#f0b726', strokeWidth: 0, stroke: '#ffffff', cornerRadius: 5 },
-      { id: ids.card, type: 'text', text: 'Select an object and open its animation settings on the right: transition speed curve, duration, intro and exit.', x: 824, y: 430, width: 860, height: 202, fontSize: 42, fontFamily: font, fill: '#c5d3e8', align: 'left', lineHeight: 1.2 },
+      { id: ids.card, type: 'text', text: t('Select an object and open its animation panel on the right: how it arrives, how it leaves, the duration and the motion.'), x: 824, y: 430, width: 860, height: 202, fontSize: 42, fontFamily: font, fill: '#c5d3e8', align: 'left', lineHeight: 1.2 },
     ] },
   };
   s2.id = s2.page.id;

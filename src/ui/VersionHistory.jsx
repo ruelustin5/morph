@@ -3,16 +3,17 @@ import { Alert, Button, Icon, InputGroup, Menu, MenuDivider, MenuItem, Popover, 
 import { useController } from './hooks';
 import { Thumb } from './SlideSorter';
 import { Avatar } from './People';
+import { t, tj, LANG } from '../i18n';
 
 const dayLabel = (ts) => {
   const d = new Date(ts), now = new Date();
   const y = new Date(now); y.setDate(now.getDate() - 1);
-  if (d.toDateString() === now.toDateString()) return 'Today';
-  if (d.toDateString() === y.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  if (d.toDateString() === now.toDateString()) return t('Today');
+  if (d.toDateString() === y.toDateString()) return t('Yesterday');
+  return d.toLocaleDateString(LANG, { weekday: 'long', month: 'long', day: 'numeric' });
 };
-const timeLabel = (ts) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-const REASON = { restore: 'Before restoring', created: 'Created' };
+const timeLabel = (ts) => new Date(ts).toLocaleTimeString(LANG, { hour: 'numeric', minute: '2-digit' });
+const REASON = { restore: 'Before restoring', created: 'Created' }; // translated where shown
 
 function NameEditor({ initial, onDone }) {
   const [v, setV] = useState(initial || '');
@@ -21,7 +22,7 @@ function NameEditor({ initial, onDone }) {
       autoFocus
       small
       value={v}
-      placeholder="Version name"
+      placeholder={t('Version name')}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => onDone(v)}
       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') onDone(null); }}
@@ -46,7 +47,7 @@ export function VersionHistory({ c, onClose }) {
     if (!entry) { setSel('current'); return undefined; }
     setLoading(true);
     c.loadVersion(entry).then((p) => { if (alive) { setPreview(p); setLoading(false); } })
-      .catch(() => { if (alive) { setLoading(false); setPreview(null); c.toast('This version could not be opened.', 'danger'); } });
+      .catch(() => { if (alive) { setLoading(false); setPreview(null); c.toast(t('This version could not be opened.'), 'danger'); } });
     return () => { alive = false; };
   }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -71,13 +72,13 @@ export function VersionHistory({ c, onClose }) {
   };
 
   return (
-    <div className="vh" role="dialog" aria-label="Version history">
+    <div className="vh" role="dialog" aria-label={t('Version history')}>
       <header className="vh-bar">
-        <Button minimal icon="arrow-left" text="Back" onClick={onClose} />
-        <div className="vh-title">{entry ? (entry.name || `${dayLabel(entry.savedAt)}, ${timeLabel(entry.savedAt)}`) : 'Current version'}</div>
+        <Button minimal icon="arrow-left" text={t('Back')} onClick={onClose} />
+        <div className="vh-title">{entry ? (entry.name || `${dayLabel(entry.savedAt)}, ${timeLabel(entry.savedAt)}`) : t('Current version')}</div>
         <div className="vh-actions">
-          {entry && c.isOwner && <Button icon="duplicate" text="Make a copy" onClick={() => c.copyVersionAsProject(entry)} />}
-          {entry && <Button intent="primary" icon="history" text="Restore this version" onClick={() => setConfirm(entry)} />}
+          {entry && c.isOwner && <Button icon="duplicate" text={t('Make a copy')} onClick={() => c.copyVersionAsProject(entry)} />}
+          {entry && <Button intent="primary" icon="history" text={t('Restore this version')} onClick={() => setConfirm(entry)} />}
         </div>
       </header>
       <div className="vh-body">
@@ -97,17 +98,17 @@ export function VersionHistory({ c, onClose }) {
         </div>
         <aside className="vh-list">
           <div className="vh-list-head">
-            <Switch checked={namedOnly} onChange={(e) => setNamedOnly(e.currentTarget.checked)} label="Named versions only" />
+            <Switch checked={namedOnly} onChange={(e) => setNamedOnly(e.currentTarget.checked)} label={t('Named versions only')} />
           </div>
           <button type="button" className={'vh-item' + (sel === 'current' ? ' is-selected' : '')} onClick={() => setSel('current')}>
-            <div className="vh-time">Current version</div>
-            <div className="vh-sub">Saved automatically</div>
+            <div className="vh-time">{t('Current version')}</div>
+            <div className="vh-sub">{t('Saved automatically')}</div>
             <div className="vh-people">{c.othersIn(c.projectId).length ? null : null}</div>
           </button>
           <div className="vh-name-current">
             {editing === 'current'
               ? <NameEditor initial="" onDone={async (v) => { setEditing(null); if (v != null) await c.nameCurrentVersion(v.trim()); }} />
-              : <Button small minimal icon="tag" text="Name current version" onClick={() => setEditing('current')} />}
+              : <Button small minimal icon="tag" text={t('Name current version')} onClick={() => setEditing('current')} />}
           </div>
           {groups.map((g) => (
             <div key={g.label} className="vh-group">
@@ -119,18 +120,18 @@ export function VersionHistory({ c, onClose }) {
                     <div className="vh-time">{timeLabel(v.savedAt)}</div>
                     <Popover placement="bottom-end" minimal content={
                       <Menu>
-                        <MenuItem icon="tag" text={v.name ? 'Rename' : 'Name this version'} onClick={() => setEditing(v.slot)} />
-                        {c.isOwner && <MenuItem icon="duplicate" text="Make a copy" onClick={() => c.copyVersionAsProject(v)} />}
+                        <MenuItem icon="tag" text={v.name ? t('Rename') : t('Name this version')} onClick={() => setEditing(v.slot)} />
+                        {c.isOwner && <MenuItem icon="duplicate" text={t('Make a copy')} onClick={() => c.copyVersionAsProject(v)} />}
                         <MenuDivider />
-                        <MenuItem icon="trash" intent="danger" text="Delete" onClick={() => c.deleteVersion(v.slot).then(() => { if (sel === v.slot) setSel('current'); })} />
+                        <MenuItem icon="trash" intent="danger" text={t('Delete')} onClick={() => c.deleteVersion(v.slot).then(() => { if (sel === v.slot) setSel('current'); })} />
                       </Menu>
                     }>
-                      <Button minimal small icon="more" aria-label="Version options" onClick={(e) => e.stopPropagation()} />
+                      <Button minimal small icon="more" aria-label={t('Version options')} onClick={(e) => e.stopPropagation()} />
                     </Popover>
                   </div>
                   {editing === v.slot
                     ? <div onClick={(e) => e.stopPropagation()}><NameEditor initial={v.name} onDone={(n) => { setEditing(null); if (n != null) c.renameVersion(v.slot, n.trim()); }} /></div>
-                    : (v.name || REASON[v.reason]) && <div className={'vh-sub' + (v.name ? ' is-name' : '')}>{v.name || REASON[v.reason]}</div>}
+                    : (v.name || REASON[v.reason]) && <div className={'vh-sub' + (v.name ? ' is-name' : '')}>{v.name || t(REASON[v.reason])}</div>}
                   <div className="vh-people">
                     {authorsOf(v).map((p, k) => <span key={k} className="vh-person"><Avatar person={p} size={16} ring="transparent" /><span>{p.name}</span></span>)}
                   </div>
@@ -138,20 +139,20 @@ export function VersionHistory({ c, onClose }) {
               ))}
             </div>
           ))}
-          {!list.length && <p className="vh-empty">{namedOnly ? 'No named versions yet.' : 'Versions are saved automatically every few minutes while you edit.'}</p>}
+          {!list.length && <p className="vh-empty">{namedOnly ? t('No named versions yet.') : t('Versions are saved automatically every few minutes while you edit.')}</p>}
         </aside>
       </div>
       <Alert
         isOpen={!!confirm}
         icon="history"
         intent="primary"
-        confirmButtonText="Restore"
-        cancelButtonText="Cancel"
+        confirmButtonText={t('Restore')}
+        cancelButtonText={t('Cancel')}
         onCancel={() => setConfirm(null)}
         onConfirm={async () => { const v = confirm; setConfirm(null); if (await c.restoreVersion(v)) onClose(); }}
       >
-        <p>Restore the version from <b>{confirm && timeLabel(confirm.savedAt)}</b>{confirm && confirm.name ? <> (“{confirm.name}”)</> : null}?</p>
-        <p className="muted">Everyone in this project will see it. The current state stays in the history.</p>
+        <p>{tj('Restore the version from {when}?', { when: <b>{confirm && timeLabel(confirm.savedAt)}{confirm && confirm.name ? ` (“${confirm.name}”)` : ''}</b> })}</p>
+        <p className="muted">{t('Everyone in this project will see it. The current state stays in the history.')}</p>
       </Alert>
     </div>
   );

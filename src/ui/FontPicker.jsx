@@ -4,6 +4,7 @@ import { Button, Icon, InputGroup, Popover } from '@blueprintjs/core';
 import { FixedSizeList } from 'react-window';
 import { globalFonts } from 'opn/utils/fonts';
 import ALL from '../google-fonts.json';
+import { t } from '../i18n';
 
 // Well-known families shown first.
 export const CLASSICS = [
@@ -14,7 +15,7 @@ export const CLASSICS = [
   'Roboto Mono', 'JetBrains Mono', 'Fira Code', 'Space Mono', 'IBM Plex Mono',
 ];
 const CAT = Object.fromEntries(ALL);
-const CATS = [['all', 'All'], ['s', 'Sans'], ['r', 'Serif'], ['d', 'Display'], ['h', 'Script'], ['m', 'Mono']];
+const CATS = [['all', 'All'], ['s', 'Sans'], ['r', 'Serif'], ['d', 'Display'], ['h', 'Script'], ['m', 'Mono']]; // labels translated where shown
 const ROW = 34;
 
 function FontRow({ fam, active, store, onPick, style }) {
@@ -31,7 +32,7 @@ function FontList({ store, current, onPick }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
   const inputRef = useRef(null);
-  useEffect(() => { const t = setTimeout(() => inputRef.current && inputRef.current.focus(), 30); return () => clearTimeout(t); }, []);
+  useEffect(() => { const tm = setTimeout(() => inputRef.current && inputRef.current.focus(), 30); return () => clearTimeout(tm); }, []);
   const custom = [...store.fonts, ...globalFonts].map((f) => f.fontFamily);
   const used = [];
   store.find((el) => { if (el.type === 'text' && el.fontFamily && !used.includes(el.fontFamily)) used.push(el.fontFamily); return false; });
@@ -48,9 +49,9 @@ function FontList({ store, current, onPick }) {
       l.forEach((f) => out.push({ f }));
     };
     if (!nq && cat === 'all') {
-      section('In this deck', [...new Set([...used, ...custom])]);
-      section('Classics', CLASSICS.filter((f) => !used.includes(f)));
-      section('All Google Fonts', ALL.map((x) => x[0]));
+      section(t('In this deck'), [...new Set([...used, ...custom])]);
+      section(t('Classics'), CLASSICS.filter((f) => !used.includes(f)));
+      section(t('All Google Fonts'), ALL.map((x) => x[0]));
     } else {
       const seen = new Set();
       const merged = [...custom, ...CLASSICS, ...ALL.map((x) => x[0])].filter((f) => (seen.has(f) ? false : seen.add(f)));
@@ -60,11 +61,11 @@ function FontList({ store, current, onPick }) {
   }, [q, cat, used.join('|'), custom.join('|')]);
   return (
     <div className="fp">
-      <InputGroup inputRef={inputRef} leftIcon="search" placeholder="Search 1,800+ fonts" value={q} onChange={(e) => setQ(e.target.value)}
+      <InputGroup inputRef={inputRef} leftIcon="search" placeholder={t('Search 1,800+ fonts')} value={q} onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { const first = rows.find((r) => r.f); if (first) onPick(first.f); } }} />
       <div className="fp-cats">
         {CATS.map(([k, label]) => (
-          <button key={k} type="button" className={'fp-cat' + (cat === k ? ' is-active' : '')} onClick={() => setCat(k)}>{label}</button>
+          <button key={k} type="button" className={'fp-cat' + (cat === k ? ' is-active' : '')} onClick={() => setCat(k)}>{t(label)}</button>
         ))}
       </div>
       {rows.length ? (

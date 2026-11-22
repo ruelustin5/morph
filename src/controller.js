@@ -18,6 +18,7 @@ import { buildExportHtml, exportFileName } from './export';
 import { applySnapshot, getSnapshot } from 'mobx-state-tree';
 import { reaction } from 'mobx';
 import { LiveSync } from './live';
+import { t, tn, LANG } from './i18n';
 import { diffPage, applyPageOps, pageOpsEmpty, clone as fastClone } from './sync-core';
 import { collectFonts, googleFontsUrl } from './render';
 import {
@@ -160,7 +161,7 @@ export class Controller {
     this.keyring = [];   // guests: projects joined with a code
     this.saves = [];
     this.lastSavedAt = null;
-    this.status = { kind: 'loading', text: 'Loading…' };
+    this.status = { kind: 'loading', text: t('Loading…') };
     this.presenting = null;
     this.ctx = makeRenderCtx(() => this.bumpRender());
     this.renderTick = 0;
@@ -209,7 +210,7 @@ export class Controller {
       openId = idx.last && idx.list.some((x) => x.id === idx.last) ? idx.last
         : (idx.list.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0] || {}).id || null;
     } catch (e) {
-      this.toast('Could not reach saved data: ' + (e.message || e), 'danger', { timeout: 9000 });
+      this.toast(t('Could not reach saved data: ') + (e.message || e), 'danger', { timeout: 9000 });
     }
     if (this.liveMode) this.publishSpaceInfo();
     if (this.pendingCode) {
@@ -272,8 +273,8 @@ export class Controller {
 
   /** "Your space" / "Ana's space". */
   spaceName() {
-    if (this.isOwner) return 'Your space';
-    if (this.spaceUnclaimed && TARGET === 'web') return 'Welcome to Morph';
+    if (this.isOwner) return t('Your space');
+    if (this.spaceUnclaimed && TARGET === 'web') return t('Welcome to Morph');
     const k = this.keyring && (this.keyring.find((x) => x.pid === this.projectId) || this.keyring.find((x) => x.ownerName));
     const p = this.spaceOwnerId && this.profiles && this.profiles[this.spaceOwnerId];
     const n = (k && k.ownerName) || (p && p.name);
@@ -302,7 +303,7 @@ export class Controller {
   }
 
   keyToEntry(k) {
-    return { id: k.pid, title: k.title || 'Untitled presentation', shared: { sid: k.sid, key: k.key }, base: '', guest: true,
+    return { id: k.pid, title: k.title || t('Untitled presentation'), shared: { sid: k.sid, key: k.key }, base: '', guest: true,
       updatedAt: k.updatedAt || k.at, slides: k.slides, w: k.w, h: k.h, cover: k.cover };
   }
 
@@ -341,13 +342,13 @@ export class Controller {
   /** Open a project with the code someone gave you. */
   async joinWithCode(input) {
     const code = normalizeCode(input);
-    if (!code) return { error: 'Codes look like ABCD-EFGH-JKLM.' };
+    if (!code) return { error: t('Codes look like ABCD-EFGH-JKLM.') };
     let inv = null;
     try {
       const doc = await this.backend.get(`inv/${await codeId(code)}`);
       inv = doc ? await openInvite(code, doc) : null;
     } catch (e) { inv = null; }
-    if (!inv || !inv.pid) return { error: 'This code doesn’t work. Check it, or ask for a new one.' };
+    if (!inv || !inv.pid) return { error: t('This code doesn’t work. Check it, or ask for a new one.') };
     if (this.isOwner) { // your own code
       if (this.projects.some((x) => x.id === inv.pid)) await this.openProject(inv.pid);
       return { ok: true };
@@ -359,7 +360,7 @@ export class Controller {
     if (inv.name && !(this.me && this.me.name)) { this.setNick(inv.name); this.needsName = false; }
     this.markJoined(k);
     const ok = await this.openProject(inv.pid);
-    return ok ? { ok: true } : { error: 'This project could not be opened.' };
+    return ok ? { ok: true } : { error: t('This project could not be opened.') };
   }
 
   /** Tell the owner this code was used (shown as "Joined" in Share). */
@@ -422,7 +423,7 @@ export class Controller {
       if (await this.refreshKey(id)) { await sleep(600); if (await this.openProject(id, { silent: true, quiet: true })) return; }
       this.keyring = this.keyring.filter((x) => x.pid !== id);
       await this.saveKeyring();
-      this.toast(`You no longer have access to “${title || 'this project'}”.`, 'warning', { timeout: 8000 });
+      this.toast(t('You no longer have access to “{title}”.', { title: title || t('this project') }), 'warning', { timeout: 8000 });
       await this.openAnother();
     } finally {
       this._moving = false;
@@ -517,7 +518,7 @@ export class Controller {
       // Opens the place (the database rules only accept writes inside places the owner opened).
       await this.backend.set(`sh/${shared.sid}`, { at: Date.now() });
     }
-    this.busy = mode === 'share' ? 'Sharing…' : mode === 'rekey' ? 'Changing the key…' : 'Making it private…';
+    this.busy = mode === 'share' ? t('Sharing…') : mode === 'rekey' ? t('Changing the key…') : t('Making it private…');
     this.emitNow();
     try {
       await copyProjectData(from.be, from.base, to.be, to.base);
@@ -588,7 +589,7 @@ export class Controller {
     if (!this.room || !this.project) return;
     const slide = this.project.slides[this.active];
     const sel = (this.store.selectedElementsIds || []).slice(0, 40);
-    const p = { project: this.projectId || null, slide: slide ? slide.id : null, dirty: !!this.dirty, uid: (this.me && this.me.id) || null, sel, nick: this.nick || null };
+    const p = { project: this.projectId || null, slide: slide ? slide.id : null, dirty: !!this.dirty, uid: (this.me && this.me.id) || null, sel, nick: this.myName() || null };
     const key = JSON.stringify(p);
     if (key === this._lastPresence) return;
     this._lastPresence = key;
@@ -628,7 +629,7 @@ export class Controller {
     else if (x) { id = x.uid || null; nick = x.nick || ''; isMe = !!(this.me && id && this.me.id === id); }
     const prof = id && this.profiles ? this.profiles[id] : null;
     const base = (prof && prof.name) || nick || '';
-    const name = isMe && x && 'peer' in x ? 'You (another tab)' : isMe ? 'You' : base || 'Someone';
+    const name = isMe && x && 'peer' in x ? t('You (another tab)') : isMe ? t('You') : base || t('Someone');
     let color = prof && prof.color;
     if (!color) { let h = 0; const k = id || nick || 'x'; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; color = ['#d1336b', '#2a9d8f', '#e07a1f', '#6f43c0', '#0b8043', '#c2185b', '#1565c0', '#8d6e00'][h % 8]; }
     return { id, name, avatar: prof && prof.avatarUrl, color, isMe };
@@ -647,8 +648,8 @@ export class Controller {
       if (this.newerSave && this.newerSave.savedAt >= top.savedAt) return;
       this.newerSave = top;
       this.resolveIds([top.by]);
-      this.toast(`${this.whoSaved(top)} saved a newer version of this project.`, 'warning', {
-        timeout: 12000, action: { text: 'Open it', onClick: () => { this.wantNewer = true; this.emitNow(); } },
+      this.toast(t('{name} saved a newer version of this project.', { name: this.whoSaved(top) }), 'warning', {
+        timeout: 12000, action: { text: t('Open it'), onClick: () => { this.wantNewer = true; this.emitNow(); } },
       });
       this.emitNow();
     });
@@ -661,10 +662,10 @@ export class Controller {
   }
 
   whoSaved(entry) {
-    if (!entry || !entry.by) return 'Someone';
-    if (this.me && this.me.id === entry.by) return 'You (in another tab)';
+    if (!entry || !entry.by) return t('Someone');
+    if (this.me && this.me.id === entry.by) return t('You (in another tab)');
     const p = this.profiles && this.profiles[entry.by];
-    return (p && p.name) || 'Someone';
+    return (p && p.name) || t('Someone');
   }
 
   async openNewer() {
@@ -674,9 +675,9 @@ export class Controller {
   }
 
   statusFromSave() {
-    if (this.live) return { kind: 'ok', text: this.lastSavedAt ? `Last version ${fmtWhen(this.lastSavedAt)}` : 'No version yet' };
-    if (this.backend.kind === 'cloud') return { kind: 'ok', text: this.lastSavedAt ? `Saved ${fmtWhen(this.lastSavedAt)}` : 'Not saved yet' };
-    return { kind: 'warn', text: this.lastSavedAt ? `Saved in this browser ${fmtWhen(this.lastSavedAt)}` : 'Saving in this browser only' };
+    if (this.live) return { kind: 'ok', text: this.lastSavedAt ? t('Last version {when}', { when: fmtWhen(this.lastSavedAt) }) : t('No version yet') };
+    if (this.backend.kind === 'cloud') return { kind: 'ok', text: this.lastSavedAt ? t('Saved {when}', { when: fmtWhen(this.lastSavedAt) }) : t('Not saved yet') };
+    return { kind: 'warn', text: this.lastSavedAt ? t('Saved in this browser {when}', { when: fmtWhen(this.lastSavedAt) }) : t('Saving in this browser only') };
   }
 
   /** Open a project from the project list (loads its newest valid save). */
@@ -693,11 +694,11 @@ export class Controller {
       res = await loadLatest(this.backend, base);
       project = res.project;
     } catch (e) {
-      this.toast('Could not open this project: ' + (e.message || e), 'danger', { timeout: 9000 });
+      this.toast(t('Could not open this project: ') + (e.message || e), 'danger', { timeout: 9000 });
     }
     this.busy = null;
     if (!project) {
-      if (res && res.errors.length) this.toast('This project’s saved copies could not be read.', 'danger', { timeout: 9000 });
+      if (res && res.errors.length) this.toast(t('This project’s saved copies could not be read.'), 'danger', { timeout: 9000 });
       if (!silent) { this.emitNow(); return false; }
       project = demoProject();
     }
@@ -712,7 +713,7 @@ export class Controller {
     this.dirty = false;
     this.status = this.statusFromSave();
     this.watchHead();
-    if (res && res.fellBack) this.toast(`The latest save could not be read, so the backup from ${fmtTime(res.entry.savedAt)} was opened instead.`, 'warning', { timeout: 9000 });
+    if (res && res.fellBack) this.toast(t('The latest save could not be read, so the backup from {when} was opened instead.', { when: fmtTime(res.entry.savedAt) }), 'warning', { timeout: 9000 });
     this.emitNow();
     const needCover = entry && !entry.cover;
     const cover = needCover ? coverOf(project) : null;
@@ -750,7 +751,7 @@ export class Controller {
       getMeta: () => this.project && ({
         order: this.project.slides.map((x) => x.id), title: this.project.title, width: this.project.width,
         height: this.project.height, fonts: this.project.fonts || [], objects: this.project.objects || {},
-        settings: this.project.settings || {},
+        settings: this.project.settings || {}, notes: this.project.notes || {}, owners: this.project.owners || {},
       }),
       applySlide: (sid, state, info) => this.applyLiveSlide(sid, state, info),
       applyMeta: (meta, getBase, info) => this.applyLiveMeta(meta, getBase, info),
@@ -768,11 +769,11 @@ export class Controller {
     this._lastLiveErr = now;
     const msg = (e && e.message) || String(e);
     if (e && e.code === 'invalid_argument' && docKey && docKey.startsWith('s-')) {
-      this.toast(this.canWrite === false ? 'You can view this project but not change it.' : 'A slide could not be shared (it may be too large): ' + msg, 'warning', { timeout: 8000 });
+      this.toast(this.canWrite === false ? t('You can view this project but not change it.') : t('A slide could not be shared (it may be too large): {why}', { why: msg }), 'warning', { timeout: 8000 });
     } else if (e && (e.code === 'not_granted' || e.code === 'revoked')) {
-      this.toast('You can view this project but not change it.', 'warning', { timeout: 8000 });
+      this.toast(t('You can view this project but not change it.'), 'warning', { timeout: 8000 });
     } else {
-      this.toast('Connection problem — your changes are kept and will be sent again. (' + msg + ')', 'warning', { timeout: 6000 });
+      this.toast(t('Connection problem — your changes are kept and will be sent again. (') + msg + ')', 'warning', { timeout: 6000 });
     }
   }
 
@@ -794,7 +795,7 @@ export class Controller {
         this.busy = null;
         const moved = await be.get('live/moved');
         if (moved && !this.isOwner && await this.refreshKey(id)) return this.openProjectLive(id, { silent, quiet });
-        if (!quiet) this.toast(this.isOwner ? 'This project could not be opened.' : 'This project is no longer shared with you.', 'warning', { timeout: 8000 });
+        if (!quiet) this.toast(this.isOwner ? t('This project could not be opened.') : t('This project is no longer shared with you.'), 'warning', { timeout: 8000 });
         this.emitNow();
         return false;
       }
@@ -803,7 +804,7 @@ export class Controller {
         res = await loadLatest(be, base);
         let seedFrom = res.project;
         if (!seedFrom) {
-          if (res.errors.length) this.toast('This project’s saved copies could not be read.', 'danger', { timeout: 9000 });
+          if (res.errors.length) this.toast(t('This project’s saved copies could not be read.'), 'danger', { timeout: 9000 });
           if (!silent) { this.busy = null; this.emitNow(); return false; }
           seedFrom = demoProject();
         }
@@ -815,7 +816,7 @@ export class Controller {
       }
     } catch (e) {
       this.busy = null;
-      this.toast('Could not open this project: ' + (e.message || e), 'danger', { timeout: 9000 });
+      this.toast(t('Could not open this project: ') + (e.message || e), 'danger', { timeout: 9000 });
       this.emitNow();
       return false;
     }
@@ -844,6 +845,8 @@ export class Controller {
     this.startVersionTimer();
     if (this.canWrite === false) { live.readOnly = true; live.refreshStatus(); }
     this.emitNow();
+    this.people = null;
+    this.refreshPeople();
     if (this.isOwner) updateIndex(this.backend, (d) => { d.last = id; return d; }).catch(() => {});
     else {
       try { localStorage.setItem('morph-last', id); } catch (e) { /* ignore */ }
@@ -880,7 +883,7 @@ export class Controller {
 
   normalizeProject(project) {
     project.version = project.version || 1;
-    project.title = project.title || 'Untitled presentation';
+    project.title = project.title || t('Untitled presentation');
     project.objects = project.objects || {};
     project.width = project.width || 1920;
     project.height = project.height || 1080;
@@ -929,6 +932,8 @@ export class Controller {
     p.fonts = meta.fonts || [];
     p.objects = meta.objects || {};
     p.settings = meta.settings || {};
+    p.notes = meta.notes || {};
+    p.owners = meta.owners || {};
     if (normalizeRegistry(p) && this.live) this.live.metaChanged();
     if (meta.width !== p.width || meta.height !== p.height) {
       p.width = meta.width; p.height = meta.height;
@@ -944,9 +949,9 @@ export class Controller {
       this.active = Math.max(0, Math.min(oldIndex, p.slides.length - 1));
       this.loadSlide(this.active);
       if (removedActive && !info.own) {
-        this.toast('The slide you were on was deleted by someone else.', 'warning', {
+        this.toast(t('The slide you were on was deleted by someone else.'), 'warning', {
           timeout: 8000,
-          action: { text: 'Bring it back', onClick: () => {
+          action: { text: t('Bring it back'), onClick: () => {
             this.project.slides.splice(Math.min(oldIndex, this.project.slides.length), 0, removedActive);
             this.active = this.project.slides.indexOf(removedActive);
             this.loadSlide(this.active);
@@ -1071,12 +1076,12 @@ export class Controller {
   async newProject() {
     if (this.liveMode) {
       await this.closeLive();
-      await this.createProject({ version: 1, title: 'Untitled presentation', width: this.project ? this.project.width : 1920, height: this.project ? this.project.height : 1080, fonts: [], slides: [{ id: null, page: blankPage(), anim: {} }], objects: {} }, { open: true });
-      this.toast('New project created', 'success');
+      await this.createProject({ version: 1, title: t('Untitled presentation'), width: this.project ? this.project.width : 1920, height: this.project ? this.project.height : 1080, fonts: [], slides: [{ id: null, page: blankPage(), anim: {} }], objects: {} }, { open: true });
+      this.toast(t('New project created'), 'success');
       return;
     }
-    this.startNewProject({ version: 1, title: 'Untitled presentation', width: this.project ? this.project.width : 1920, height: this.project ? this.project.height : 1080, fonts: [], slides: [{ id: null, page: blankPage(), anim: {} }], objects: {} });
-    this.toast('New project. Save it to add it to your projects.', 'none');
+    this.startNewProject({ version: 1, title: t('Untitled presentation'), width: this.project ? this.project.width : 1920, height: this.project ? this.project.height : 1080, fonts: [], slides: [{ id: null, page: blankPage(), anim: {} }], objects: {} });
+    this.toast(t('New project. Save it to add it to your projects.'), 'none');
   }
 
   /** Projects shown in the project list: saved ones plus the open one if it has never been saved. */
@@ -1098,32 +1103,32 @@ export class Controller {
       const loaded = await tmp.load();
       tmp.close();
       src = loaded ? loaded.project : (await loadLatest(sc.be, sc.base)).project;
-      if (!src) { this.toast('This project could not be read.', 'danger'); return; }
+      if (!src) { this.toast(t('This project could not be read.'), 'danger'); return; }
       if (entry.title) src.title = entry.title;
     } else {
       const entry = this.projects.find((x) => x.id === id);
       const res = await loadLatest(this.backend, entry.base);
-      if (!res.project) { this.toast('This project could not be read.', 'danger'); return; }
+      if (!res.project) { this.toast(t('This project could not be read.'), 'danger'); return; }
       src = res.project;
       if (entry.title) src.title = entry.title;
     }
-    src.title = 'Copy of ' + (src.title || 'Untitled presentation');
+    src.title = t('Copy of {title}', { title: src.title || t('Untitled presentation') });
     const nid = newId();
     try {
       if (this.liveMode) await this.createProject(src, { open: false, id: nid });
       else await this._saveAs(nid, baseFor(nid), src, null, {}, this.backend);
-      this.toast(`“${src.title}” created`, 'success');
+      this.toast(t('“{title}” created', { title: src.title }), 'success');
     } catch (e) {
-      this.toast('Could not duplicate: ' + (e.message || e), 'danger');
+      this.toast(t('Could not duplicate: ') + (e.message || e), 'danger');
     }
     this.emitNow();
   }
 
   async renameProject(id, title) {
-    const t = (title || '').trim() || 'Untitled presentation';
-    if (id === this.projectId) { this.setTitle(t); }
+    const tt = (title || '').trim() || t('Untitled presentation');
+    if (id === this.projectId) { this.setTitle(tt); }
     if (this.isOwner && this.projects.some((x) => x.id === id)) {
-      const d = await updateIndex(this.backend, (doc) => { const e = doc.list.find((x) => x.id === id); if (e) e.title = t; return doc; });
+      const d = await updateIndex(this.backend, (doc) => { const e = doc.list.find((x) => x.id === id); if (e) e.title = tt; return doc; });
       this.projects = d.list;
     }
     this.emitNow();
@@ -1159,9 +1164,9 @@ export class Controller {
       }
       clearDraft(id);
     }, 10000);
-    this.toast(`“${entry.title}” deleted`, 'none', {
+    this.toast(t('“{title}” deleted', { title: entry.title }), 'none', {
       timeout: 9000,
-      action: { text: 'Undo', onClick: async () => {
+      action: { text: t('Undo'), onClick: async () => {
         undone = true;
         clearTimeout(timer);
         const d = await updateIndex(this.backend, (doc) => { if (!doc.list.some((x) => x.id === id)) doc.list.push(entry); return doc; });
@@ -1178,13 +1183,13 @@ export class Controller {
     this.setProject(d.project, Math.min(d.active || 0, d.project.slides.length - 1));
     this.liveTouch(this.project.slides.map((x) => x.id));
     this.markDirty();
-    this.toast(this.live ? 'Unsaved changes restored and shared.' : 'Unsaved changes restored. Remember to save.', 'success');
+    this.toast(this.live ? t('Unsaved changes restored and shared.') : t('Unsaved changes restored. Remember to save.'), 'success');
   }
   discardDraft() { this.pendingDraft = null; clearDraft(this.projectId); this.emitNow(); }
 
   setProject(project, active = 0) {
     project.version = project.version || 1;
-    project.title = project.title || 'Untitled presentation';
+    project.title = project.title || t('Untitled presentation');
     project.objects = project.objects || {};
     if (!project.slides || !project.slides.length) project.slides = [{ id: newId(), page: blankPage(), anim: {} }];
     for (const s of project.slides) { s.anim = s.anim || {}; s.id = s.page.id; }
@@ -1297,9 +1302,9 @@ export class Controller {
       });
       if (!found) continue;
       const name = nameOf(this.project, found.id);
-      this.toast(`Already used as ${name} on slide ${found.k + 1}.`, 'none', {
+      this.toast(t('Already used as {name} on slide {k}.', { name, k: found.k + 1 }), 'none', {
         timeout: 9000,
-        action: { text: 'Make it the same object', onClick: () => { const err = this.linkTo(id, name); if (err) this.toast(err, 'warning'); } },
+        action: { text: t('Make it the same object'), onClick: () => { const err = this.linkTo(id, name); if (err) this.toast(err, 'warning'); } },
       });
       break;
     }
@@ -1315,9 +1320,9 @@ export class Controller {
       const tid = newId();
       await this.backend.set(`templates/${tid}`, { v: 1, name: (name || 'Template').slice(0, 60), page: stripped.page, anim: stripped.anim, w: this.project.width, h: this.project.height, at: Date.now(), by: (this.me && this.me.id) || null });
       this.templates = null;
-      this.toast(`Saved as template “${name || 'Template'}”`, 'success');
+      this.toast(t('Saved as template “{name}”', { name: name || t('Template') }), 'success');
     } catch (e) {
-      this.toast('Could not save the template: ' + ((e && e.message) || e), 'danger');
+      this.toast(t('Could not save the template: ') + ((e && e.message) || e), 'danger');
     }
     this.emitNow();
   }
@@ -1346,7 +1351,7 @@ export class Controller {
 
   async deleteTemplate(tid) {
     try { await this.backend.del(`templates/${tid}`); } catch (e) { /* ignore */ }
-    this.templates = (this.templates || []).filter((t) => t.id !== tid);
+    this.templates = (this.templates || []).filter((x) => x.id !== tid);
     this.emitNow();
   }
 
@@ -1381,6 +1386,85 @@ export class Controller {
     const owner = idByName(this.project, name);
     if (owner && owner !== id) name = makeName(nameTaken(this.project));
     this.project.objects[id] = { name };
+  }
+
+  // ---- speaker notes and slide owners ---------------------------------------------------------
+  noteOf(sid) { return (this.project && this.project.notes && this.project.notes[sid]) || ''; }
+
+  setNote(sid, text) {
+    if (!this.project) return;
+    const notes = { ...(this.project.notes || {}) };
+    const v = String(text || '').slice(0, 20000);
+    if (v.trim()) notes[sid] = v; else delete notes[sid];
+    this.project.notes = notes;
+    this.liveTouch([]);
+    this.markDirty();
+  }
+
+  /** This person's key in the open project: 'owner' for the space owner, else their link's id. */
+  myKey() {
+    if (this.isOwner) return 'owner';
+    const k = this.keyring.find((x) => x.pid === this.projectId);
+    return (k && k.personKey) || null;
+  }
+
+  ownerOf(sid) { return (this.project && this.project.owners && this.project.owners[sid]) || null; }
+
+  personName(key) {
+    if (!key) return '';
+    const known = (this.people || []).find((x) => x.key === key);
+    if (known) return known.name;
+    const names = this.settings.people || {};
+    return names[key] || (key === 'owner' ? t('Owner') : t('Someone'));
+  }
+
+  /** People who can be given slides: the owner and everyone with a link to this project. */
+  async refreshPeople() {
+    const pid = this.projectId;
+    const out = [];
+    const ownerName = this.isOwner ? ((this.me && this.me.name) || this.myName() || t('Me')) : ((this.keyring.find((x) => x.pid === pid) || {}).ownerName || t('Owner'));
+    out.push({ key: 'owner', name: ownerName });
+    try {
+      if (!this.isOwner) {
+        const k = this.keyring.find((x) => x.pid === pid);
+        if (k && k.code && !k.personKey) { k.personKey = await codeId(k.code); this.saveKeyring(); }
+      }
+      if (this.isOwner) {
+        const info = await this.shareInfo(pid);
+        for (const inv of (info && info.invites) || []) out.push({ key: inv.id, name: inv.name || (inv.joined && inv.joined.nick) || t('Someone') });
+      } else if (this.pbe && this.pbe.list) {
+        for (const d of await this.pbe.list('m')) out.push({ key: d.id, name: (d.data && d.data.nick) || t('Someone') });
+      }
+    } catch (e) { /* keep what we have */ }
+    if (pid !== this.projectId) return;
+    this.people = out;
+    this.emitNow();
+  }
+
+  /** Show only the slides assigned to me (and go to the first of them). */
+  setMineOnly(on) {
+    this.ui = { ...this.ui, mine: !!on };
+    if (on && this.project) {
+      const me = this.myKey();
+      const cur = this.project.slides[this.active];
+      if (!cur || this.ownerOf(cur.id) !== me) {
+        const k = this.project.slides.findIndex((x) => this.ownerOf(x.id) === me);
+        if (k >= 0) this.selectSlide(k);
+      }
+    }
+    this.emitNow();
+  }
+
+  /** Give a slide to someone (null: nobody). Their name is kept with the project so everyone sees it. */
+  setOwner(sids, person) {
+    if (!this.project) return;
+    const owners = { ...(this.project.owners || {}) };
+    for (const sid of [].concat(sids)) { if (person) owners[sid] = person.key; else delete owners[sid]; }
+    this.project.owners = owners;
+    if (person) this.project.settings = { ...this.settings, people: { ...(this.settings.people || {}), [person.key]: person.name } };
+    this.liveTouch([]);
+    this.markDirty();
+    this.emitNow();
   }
 
   // ---- project settings and themes ----------------------------------------------------------
@@ -1461,14 +1545,14 @@ export class Controller {
     if (touched.length) {
       this.loadSlide(this.active);
       this.liveTouch(touched);
-      this.toast(`${touched.length} slide${touched.length > 1 ? 's' : ''} restyled with ${B.name}`, 'success');
+      this.toast(tn(touched.length, '1 slide restyled with {theme}', '{n} slides restyled with {theme}', { theme: t(B.name) }), 'success');
     }
   }
 
   markDirty() {
     this.dirty = true;
     this.editCount = (this.editCount || 0) + 1;
-    if (this.status.kind !== 'saving') this.status = this.live ? this.statusFromSave() : { kind: 'dirty', text: 'Unsaved changes' };
+    if (this.status.kind !== 'saving') this.status = this.live ? this.statusFromSave() : { kind: 'dirty', text: t('Unsaved changes') };
     if (this.live) { this.scheduleIndexUpdate(); this.editsSinceVersion = true; this.noteAuthor(this.me_()); }
     clearTimeout(this._draftTimer);
     const pid = this.projectId;
@@ -1511,6 +1595,9 @@ export class Controller {
 
   duplicateSlide(i, opts = {}) {
     const copy = duplicateSlideData(this.project.slides[i], this.project, opts);
+    const from = this.project.slides[i].id;
+    if (this.project.notes && this.project.notes[from]) this.project.notes = { ...this.project.notes, [copy.id]: this.project.notes[from] };
+    if (this.project.owners && this.project.owners[from]) this.project.owners = { ...this.project.owners, [copy.id]: this.project.owners[from] };
     this.project.slides.splice(i + 1, 0, copy);
     this.active = i + 1;
     this.loadSlide(i + 1);
@@ -1521,7 +1608,7 @@ export class Controller {
 
   deleteSlide(i) {
     const slides = this.project.slides;
-    if (slides.length <= 1) { this.toast('A presentation needs at least one slide.'); return; }
+    if (slides.length <= 1) { this.toast(t('A presentation needs at least one slide.')); return; }
     const [removed] = slides.splice(i, 1);
     const wasActive = i === this.active;
     if (i < this.active || (wasActive && this.active >= slides.length)) this.active = Math.max(0, this.active - 1);
@@ -1529,8 +1616,8 @@ export class Controller {
     this.liveTouch([]);
     this.markDirty();
     this.emitNow();
-    this.toast(`Slide ${i + 1} deleted`, 'none', {
-      action: { text: 'Undo', onClick: () => {
+    this.toast(t('Slide {n} deleted', { n: i + 1 }), 'none', {
+      action: { text: t('Undo'), onClick: () => {
         if (this.project.slides.some((x) => x.id === removed.id)) return;
         this.project.slides.splice(Math.min(i, this.project.slides.length), 0, removed);
         this.active = this.project.slides.indexOf(removed);
@@ -1575,10 +1662,10 @@ export class Controller {
 
   rename(id, name) {
     const n = normalizeId(name);
-    if (!n) return 'Use letters or numbers';
+    if (!n) return t('Use letters or numbers');
     let other = idByName(this.project, n);
     if (other && other !== id && !this.slidesWith(other).length) { delete this.project.objects[other]; other = null; } // stale entry
-    if (other && other !== id) return `${n} is already used. Use Link to make them the same object.`;
+    if (other && other !== id) return t('{n} is already used. Use Link to make them the same object.', { n });
     this.project.objects[id] = { ...(this.project.objects[id] || {}), name: n };
     const e = this.store.getElementById(id);
     if (e) this.store.history.ignore(() => e.set({ name: n }));
@@ -1656,10 +1743,10 @@ export class Controller {
 
   linkTo(elementId, targetName) {
     const target = idByName(this.project, targetName);
-    if (!target) return `No object is called "${targetName}"`;
+    if (!target) return t('No object is called “{name}”', { name: targetName });
     if (target === elementId) return null;
     const page = this.project.slides[this.active].page;
-    if (leafMap(page).has(target) || findRaw(page, target)) return `${nameOf(this.project, target)} is already on this slide`;
+    if (leafMap(page).has(target) || findRaw(page, target)) return t('{n} is already on this slide', { n: nameOf(this.project, target) });
     this._swapId(elementId, target);
     return null;
   }
@@ -1677,9 +1764,9 @@ export class Controller {
     const prev = findRaw(this.project.slides[k].page, id);
     const el = this.store.getElementById(id);
     if (!prev || !el) return;
-    if (prev.type !== el.type) { this.toast('The previous version is a different kind of element.', 'warning'); return; }
+    if (prev.type !== el.type) { this.toast(t('The previous version is a different kind of element.'), 'warning'); return; }
     el.set(stateProps(prev));
-    this.toast(`Reset to its look on slide ${k + 1}`);
+    this.toast(t('Back to its look on slide {k}', { k: k + 1 }));
   }
 
   /** Objects available for linking (not on the current slide). */
@@ -1702,6 +1789,8 @@ export class Controller {
   snapshotForSave() {
     const p = deepClone(this.project);
     pruneRegistry(p);
+    const ids = new Set(p.slides.map((x) => x.id));
+    for (const k of ['notes', 'owners']) if (p[k]) for (const sid of Object.keys(p[k])) if (!ids.has(sid)) delete p[k][sid];
     return p;
   }
 
@@ -1716,7 +1805,7 @@ export class Controller {
       const d = await updateIndex(this.backend, (doc) => {
         let e = doc.list.find((x) => x.id === id);
         if (!e) { e = { id, base, createdAt: entry.savedAt }; doc.list.push(e); }
-        Object.assign(e, { ...(shared ? {} : { base }), title: p.title || 'Untitled presentation', updatedAt: entry.savedAt, slides: p.slides.length, w: p.width, h: p.height, cover });
+        Object.assign(e, { ...(shared ? {} : { base }), title: p.title || t('Untitled presentation'), updatedAt: entry.savedAt, slides: p.slides.length, w: p.width, h: p.height, cover });
         return doc;
       });
       this.projects = d.list;
@@ -1766,7 +1855,7 @@ export class Controller {
       this.emitNow();
       return res.skipped ? null : res.entry;
     } catch (e) {
-      if (!auto) this.toast('The version could not be saved: ' + ((e && e.message) || e), 'danger', { timeout: 8000 });
+      if (!auto) this.toast(t('The version could not be saved: ') + ((e && e.message) || e), 'danger', { timeout: 8000 });
       return null;
     } finally {
       this._versioning = false;
@@ -1775,17 +1864,17 @@ export class Controller {
 
   async nameCurrentVersion(name) {
     const entry = await this.makeVersion({ auto: false, name: name || '', force: true });
-    if (entry) this.toast(name ? `Version “${name}” saved` : 'Version saved', 'success');
+    if (entry) this.toast(name ? t('Version “{name}” saved', { name }) : t('Version saved'), 'success');
     return entry;
   }
 
   async renameVersion(slot, name) {
-    try { this.saves = await renameVersion(this.pbe, this.projectBase, slot, name, this.tab); } catch (e) { this.toast('Could not rename: ' + e.message, 'danger'); }
+    try { this.saves = await renameVersion(this.pbe, this.projectBase, slot, name, this.tab); } catch (e) { this.toast(t('Could not rename: ') + e.message, 'danger'); }
     this.emitNow();
   }
 
   async deleteVersion(slot) {
-    try { this.saves = await deleteVersion(this.pbe, this.projectBase, slot, this.tab); } catch (e) { this.toast('Could not delete: ' + e.message, 'danger'); }
+    try { this.saves = await deleteVersion(this.pbe, this.projectBase, slot, this.tab); } catch (e) { this.toast(t('Could not delete: ') + e.message, 'danger'); }
     this.emitNow();
   }
 
@@ -1806,10 +1895,10 @@ export class Controller {
       this.setProject(deepClone(p), 0);
       this.liveTouch(this.project.slides.map((x) => x.id));
       this.markDirty();
-      this.toast(`Restored the version from ${fmtTime(entry.savedAt)}`, 'success', { timeout: 5000 });
+      this.toast(t('Restored the version from {when}', { when: fmtTime(entry.savedAt) }), 'success', { timeout: 5000 });
       return true;
     } catch (e) {
-      this.toast('This version could not be restored: ' + ((e && e.message) || e), 'danger');
+      this.toast(t('This version could not be restored: ') + ((e && e.message) || e), 'danger');
       return false;
     }
   }
@@ -1819,7 +1908,7 @@ export class Controller {
     p.title = `${this.project.title} (${entry.name || fmtTime(entry.savedAt)})`;
     if (this.liveMode) await this.createProject(p, { open: false });
     else { const nid = newId(); await this._saveAs(nid, baseFor(nid), p, null, {}, this.backend); }
-    this.toast(`“${p.title}” added to your projects`, 'success');
+    this.toast(t('“{title}” added to your projects', { title: p.title }), 'success');
   }
 
   watchVersions() {
@@ -1838,13 +1927,13 @@ export class Controller {
     if (this.live) {
       // Everything is saved continuously; Ctrl+S just makes sure the last edits are written.
       await this.live.flushAll();
-      this.toast('All changes are saved automatically.', 'none', { timeout: 2200 });
+      this.toast(t('All changes are saved automatically.'), 'none', { timeout: 2200 });
       return;
     }
     if (this.saving) return;
     if (this.live) {
       this.saving = true;
-      this.status = { kind: 'saving', text: 'Saving version…' };
+      this.status = { kind: 'saving', text: t('Saving version…') };
       this.emitNow();
       try { await this.live.flushAll(); } catch (e) { /* the version is still saved from this screen */ }
       this.saving = false;
@@ -1864,7 +1953,7 @@ export class Controller {
     }
     this.saveConflict = null;
     this.saving = true;
-    this.status = { kind: 'saving', text: 'Saving…' };
+    this.status = { kind: 'saving', text: t('Saving…') };
     this.emitNow();
     try {
       const p = this.snapshotForSave();
@@ -1876,12 +1965,12 @@ export class Controller {
       this.lastSavedAt = entry.savedAt;
       this.newerSave = null;
       this.dirty = (this.editCount || 0) !== startEdits;
-      this.status = this.dirty ? { kind: 'dirty', text: this.live ? 'Changes since last version' : 'Unsaved changes' } : this.statusFromSave();
+      this.status = this.dirty ? { kind: 'dirty', text: this.live ? t('Changes since last version') : t('Unsaved changes') } : this.statusFromSave();
       if (!this.dirty && !this.live) saveDraft(id, this.project, { dirty: false, active: this.active });
     } catch (e) {
-      const msg = e && e.code === 'quota_exceeded' ? 'Storage is full (images are large). Try smaller images.' : (e && e.message) || String(e);
-      this.status = { kind: 'error', text: 'Save failed' };
-      this.toast('Save failed — your previous saves are untouched. ' + msg, 'danger', { timeout: 9000 });
+      const msg = e && e.code === 'quota_exceeded' ? t('Storage is full (images are large). Try smaller images.') : (e && e.message) || String(e);
+      this.status = { kind: 'error', text: t('Save failed') };
+      this.toast(t('Save failed — your previous saves are untouched. ') + msg, 'danger', { timeout: 9000 });
     } finally {
       this.saving = false;
       this.emitNow();
@@ -1897,10 +1986,10 @@ export class Controller {
       this.liveTouch(this.project.slides.map((x) => x.id));
       this.markDirty();
       this.toast(this.live
-        ? `Version from ${fmtTime(entry.savedAt)} restored for everyone. The other versions are still in Backups.`
-        : `Opened the save from ${fmtTime(entry.savedAt)}. Save to keep it as the latest version.`, 'success', { timeout: 7000 });
+        ? t('Version from {when} restored for everyone. The other versions are still in Backups.', { when: fmtTime(entry.savedAt) })
+        : t('Opened the save from {when}. Save to keep it as the latest version.', { when: fmtTime(entry.savedAt) }), 'success', { timeout: 7000 });
     } catch (e) {
-      this.toast('This save could not be opened: ' + (e.message || e), 'danger');
+      this.toast(t('This save could not be opened: ') + (e.message || e), 'danger');
     }
   }
 
@@ -1935,7 +2024,7 @@ export class Controller {
     await this.save();
   }
 
-  setTitle(t) { this.project.title = t || 'Untitled presentation'; this.liveTouch([]); this.markDirty(); this.emitNow(); }
+  setTitle(v) { this.project.title = v || t('Untitled presentation'); this.liveTouch([]); this.markDirty(); this.emitNow(); }
 }
 
 /** Small copy of the first slide (big images left out) used as the project's preview. */
@@ -1965,12 +2054,12 @@ export function labelOf(el) {
 export function fmtTime(ts) {
   if (!ts) return '';
   const d = new Date(ts), now = new Date();
-  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = d.toLocaleTimeString(LANG, { hour: 'numeric', minute: '2-digit' });
   if (d.toDateString() === now.toDateString()) return time;
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time;
+  return d.toLocaleDateString(LANG, { month: 'short', day: 'numeric' }) + ', ' + time;
 }
 /** "at 6:12 PM" today, otherwise "on Nov 19, 6:12 PM". */
 export function fmtWhen(ts) {
   const d = new Date(ts), now = new Date();
-  return (d.toDateString() === now.toDateString() ? 'at ' : 'on ') + fmtTime(ts);
+  return t(d.toDateString() === now.toDateString() ? 'at {time}' : 'on {time}', { time: fmtTime(ts) });
 }

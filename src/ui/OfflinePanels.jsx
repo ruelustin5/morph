@@ -8,6 +8,7 @@ import { getTextQuickAddPresets } from 'opn/side-panel/text-panel';
 import { ColorPicker } from 'opn/toolbar/color-picker';
 import { registerNextDomDrop } from 'opn/canvas/page';
 import { t } from 'opn/utils/l10n';
+import { t as tr } from '../i18n';
 
 const readAsDataURL = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();
@@ -61,7 +62,7 @@ const OfflineTextPanel = observer(({ store }) => {
               {t(p.labelKey)}
             </DraggableItem>
           ))}
-          <p className="panel-hint">Click to add, or drag onto the slide.</p>
+          <p className="panel-hint">{tr('Click to add, or drag onto the slide.')}</p>
         </div>
       )}
       {tab === 'font' && (
@@ -76,7 +77,7 @@ const OfflineTextPanel = observer(({ store }) => {
             e.target.value = '';
           }} />
           <div className="font-list">
-            {store.fonts.length === 0 && <p className="panel-hint">Fonts you upload appear here and can be used in any text.</p>}
+            {store.fonts.length === 0 && <p className="panel-hint">{tr('Fonts you upload appear here and can be used in any text.')}</p>}
             {store.fonts.map((font) => (
               <div key={font.fontFamily} className="font-row">
                 <DraggableItem className="font-sample" style={{ fontFamily: `'${font.fontFamily}'` }}
@@ -117,26 +118,26 @@ const OfflineBackgroundPanel = observer(({ store }) => {
   return (
     <div className="offline-panel">
       <div className="offline-body">
-        <div className="panel-title">Color</div>
+        <div className="panel-title">{tr('Color')}</div>
         <div className="swatches">
           <ColorPicker value={isImage(bg) ? 'white' : bg} onChange={set} store={store} position="bottom-left" gradientEnabled>
-            <button type="button" className="swatch custom" aria-label="Custom color or gradient"><Icon icon="tint" size={16} /></button>
+            <button type="button" className="swatch custom" aria-label={tr('Custom color or gradient')}><Icon icon="tint" size={16} /></button>
           </ColorPicker>
           {SWATCHES.map((c) => (
             <button key={c} type="button" className={'swatch' + (bg === c ? ' is-active' : '')} style={{ background: c }} aria-label={`Background ${c}`} onClick={() => set(c)} />
           ))}
         </div>
-        <div className="panel-title">Gradient</div>
+        <div className="panel-title">{tr('Gradient')}</div>
         <div className="swatches gradients">
           {GRADIENTS.map((g) => (
-            <button key={g} type="button" className={'swatch wide' + (bg === g ? ' is-active' : '')} style={{ background: g }} aria-label="Gradient background" onClick={() => set(g)} />
+            <button key={g} type="button" className={'swatch wide' + (bg === g ? ' is-active' : '')} style={{ background: g }} aria-label={tr('Gradient background')} onClick={() => set(g)} />
           ))}
         </div>
-        <div className="panel-title">Image</div>
+        <div className="panel-title">{tr('Image')}</div>
         {isImage(bg) && <div className="bg-preview" style={{ backgroundImage: bg.startsWith('url(') ? bg : `url("${bg}")` }} />}
         <div className="bg-actions">
-          <Button icon="media" text={isImage(bg) ? 'Replace image' : 'Use an image'} onClick={() => fileRef.current && fileRef.current.click()} />
-          {isImage(bg) && <Button minimal icon="cross" text="Remove" onClick={() => set('white')} />}
+          <Button icon="media" text={isImage(bg) ? tr('Replace image') : tr('Use an image')} onClick={() => fileRef.current && fileRef.current.click()} />
+          {isImage(bg) && <Button minimal icon="cross" text={tr('Remove')} onClick={() => set('white')} />}
         </div>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={async (e) => {
           const f = e.target.files && e.target.files[0];

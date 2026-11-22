@@ -88,11 +88,11 @@ const EquationPanel = observer(function EquationPanel({ store }) {
   useEffect(() => {
     if (engine !== 'ready') return;
     const n = ++reqRef.current;
-    const t = setTimeout(async () => {
+    const tm = setTimeout(async () => {
       const r = await texToSvg(tex, { color, fontSize: 72, packages: pkgs });
       if (n === reqRef.current) setPreview(r);
     }, 160);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [tex, color, engine, pkKey]);
 
   const apply = async (asNew = false) => {
@@ -137,7 +137,7 @@ const EquationPanel = observer(function EquationPanel({ store }) {
         placeholder={"\\frac{a}{b}"}
         onChange={(e) => setTex(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); apply(false); } }}
-        aria-label="LaTeX"
+        aria-label={t('LaTeX')}
       />
       {offNamed.length > 0 && c && c.canWrite !== false && (
         <div className="eq-offpk">
