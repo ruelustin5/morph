@@ -163,7 +163,7 @@ export function SlideSorter({ c }) {
             </Tooltip>
           )}
           <Tooltip content={t('Layouts and themes')} placement="bottom" compact>
-            <Button small minimal icon="new-layers" aria-label={t('New slide from a layout')} onClick={() => c.setUi({ tplAt: c.active + 1 })} />
+            <Button small minimal icon="new-layers" data-tour="layouts" aria-label={t('New slide from a layout')} onClick={() => c.setUi({ tplAt: c.active + 1 })} />
           </Tooltip>
           <Tooltip content={t('New slide')} placement="bottom" compact>
             <Button small minimal icon="plus" aria-label={t('New slide')} onClick={() => c.newSlideAt(c.active + 1)} />

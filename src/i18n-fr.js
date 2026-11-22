@@ -172,6 +172,20 @@ export const FR = {
   'Morph slides': 'Diapos Morph', 'Same object on two slides = it moves between them.': 'Même objet sur deux diapos = il bouge de l’une à l’autre.',
   'Select an object and open its animation panel on the right: how it arrives, how it leaves, the duration and the motion.': 'Sélectionne un objet et ouvre son panneau d’animation à droite : comment il arrive, comment il repart, la durée et le mouvement.',
 
+  // ---- tour -----------------------------------------------------------------------------------
+  Tour: 'Visite guidée', 'Take the tour': 'Faire la visite guidée', '{a} of {b}': '{a} sur {b}', Skip: 'Passer', Next: 'Suivant', 'Let’s go': 'C’est parti',
+  'A one-minute tour of the essentials. You can come back to it from the ⋯ menu.': 'Une visite d’une minute de l’essentiel. Tu peux la refaire depuis le menu ⋯.',
+  'Your slides': 'Tes diapos', 'Click a slide to edit it, drag to reorder, right-click for more. With a theme, + offers its layouts.': 'Clique sur une diapo pour la modifier, glisse pour réordonner, clic droit pour plus. Avec un thème, + propose ses mises en page.',
+  'Themes and layouts': 'Thèmes et mises en page', 'Pick a theme: its layouts share shapes, so going from one slide to the next morphs smoothly.': 'Choisis un thème : ses mises en page partagent des formes, donc passer d’une diapo à l’autre se fait en douceur.',
+  'Add things': 'Ajouter des choses', 'Text, shapes, equations with LaTeX packages, your pictures, and (online) free photos and icons.': 'Texte, formes, équations avec packages LaTeX, tes images, et (en ligne) photos et icônes gratuites.',
+  'The slide': 'La diapo', 'Select an object to change it. An object with the same ID on the next slide moves and changes into its new look.': 'Sélectionne un objet pour le modifier. Un objet qui a le même ID sur la diapo suivante bouge et se transforme vers sa nouvelle allure.',
+  'For the selected object: how it arrives, how it leaves, how long it takes and how it moves.': 'Pour l’objet sélectionné : comment il arrive, comment il repart, combien de temps ça prend et comment il bouge.',
+  'Speaker notes': 'Notes de présentation', 'What you want to say on each slide. You can show them while presenting (S); they are never exported.': 'Ce que tu veux dire sur chaque diapo. Tu peux les afficher pendant la présentation (S) ; elles ne sont jamais exportées.',
+  'Each person gets their own secret link. Remove the person and their link stops working.': 'Chaque personne reçoit son propre lien secret. Retire la personne et son lien cesse de fonctionner.',
+  'Arrows, Page Up/Down and clickers move between slides. B blacks out the screen, L is a laser pointer, Esc leaves.': 'Les flèches, Page préc./suiv. et les télécommandes changent de diapo. B met l’écran au noir, L est un pointeur laser, Échap quitte.',
+  'One standalone .html file that plays your presentation anywhere, even offline.': 'Un seul fichier .html autonome qui joue ta présentation partout, même hors ligne.',
+  'That’s it': 'C’est tout', 'Have fun. Changes are saved automatically.': 'Amuse-toi bien. Les changements sont enregistrés automatiquement.',
+
   // ---- toolbar, objects -----------------------------------------------------------------------
   'Font size': 'Taille du texte', Smaller: 'Plus petit', Bigger: 'Plus grand', Lock: 'Verrouiller', Unlock: 'Déverrouiller',
   'Bring to front': 'Mettre au premier plan', 'Bring forward': 'Avancer', 'Send backward': 'Reculer', 'Send to back': 'Mettre à l’arrière-plan', Order: 'Ordre',

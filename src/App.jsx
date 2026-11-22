@@ -27,6 +27,7 @@ import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
 import { NotesBar } from './ui/Notes';
+import { Tour, tourSeen } from './ui/Tour';
 import { PhotosSection, IconsSection, bindOnline } from './ui/OnlinePanels';
 import { t, tn, tj, LANG, setLang } from './i18n';
 
@@ -261,6 +262,13 @@ export const App = observer(function App({ c, store }) {
   const editorRef = useRef(null);
   const [wsComponents] = useState(() => ({ PageControls: NoPageControls, ContextMenu: makeObjectMenu(c) }));
   c.openAnim = () => setAnimOpen(true);
+  // First visit (or after the tour changed): show the tour once the editor is ready and nothing else asks for attention.
+  const calm = ready && !!c.project && !c.busy && !c.needsName && !c.pendingDraft && presenting == null && !projectsOpen && !shareId && !historyOpen && c.ui.tplAt == null && c.ui.tour == null;
+  useEffect(() => {
+    if (!calm || tourSeen() || (typeof navigator !== 'undefined' && navigator.webdriver && !window.__morphTour)) return undefined;
+    const tm = setTimeout(() => { if (c.ui.tour == null) c.setUi({ tour: 0 }); }, 1200);
+    return () => clearTimeout(tm);
+  }, [calm]);
   c.closeAnim = () => setAnimOpen(false);
   useEffect(() => {
     if (!ready || !editorRef.current) return;
@@ -349,6 +357,7 @@ export const App = observer(function App({ c, store }) {
       {historyOpen && <VersionHistory c={c} onClose={() => setHistoryOpen(false)} />}
       <SaveTemplateDialog c={c} />
       <TemplateGallery c={c} />
+      <Tour c={c} />
       <Dialog isOpen={!!(ready && c.needsName)} title={t('What’s your name?')} icon="user" isCloseButtonShown={!!c.myName()} canEscapeKeyClose={!!c.myName()} canOutsideClickClose={false}
         onClose={() => { c.needsName = false; c.emitNow(); }} className="name-dialog">
         <form onSubmit={(e) => { e.preventDefault(); if (nameDraft.trim()) c.setNick(nameDraft); }}>
