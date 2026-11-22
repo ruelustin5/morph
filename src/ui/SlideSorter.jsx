@@ -76,7 +76,7 @@ function slideMenu(c, i, n) {
   );
 }
 
-const initials = (name) => String(name || '?').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+const firstName = (name) => String(name || '?').trim().split(/\s+/)[0];
 
 export function SlideSorter({ c }) {
   useController(c);
@@ -189,12 +189,23 @@ export function SlideSorter({ c }) {
               {others.some((x) => x.presence.slide === s.id) && (
                 <span className="slide-people"><AvatarStack c={c} peers={others.filter((x) => x.presence.slide === s.id)} size={18} max={2} describe={() => t('on this slide')} /></span>
               )}
-              {c.ownerOf(s.id) && (
-                <Tooltip content={t('Assigned to {name}', { name: c.personName(c.ownerOf(s.id)) })} placement="right" compact>
-                  <span className={'owner-badge' + (c.ownerOf(s.id) === me ? ' is-me' : '')}>{initials(c.personName(c.ownerOf(s.id)))}</span>
-                </Tooltip>
+              {(c.ownerOf(s.id) || c.noteOf(s.id)) && (
+                <span className="thumb-tags">
+                  {c.noteOf(s.id) && (
+                    <Tooltip content={t('Has notes')} placement="top" compact>
+                      <span className="note-tag"><Icon icon="annotation" size={10} /></span>
+                    </Tooltip>
+                  )}
+                  {c.ownerOf(s.id) && (
+                    <Tooltip content={t('Assigned to {name}', { name: c.personName(c.ownerOf(s.id)) })} placement="top" compact>
+                      <span className={'owner-tag' + (c.ownerOf(s.id) === me ? ' is-me' : '')}>
+                        <Icon icon="person" size={9} />
+                        <span>{c.ownerOf(s.id) === me ? t('You') : firstName(c.personName(c.ownerOf(s.id)))}</span>
+                      </span>
+                    </Tooltip>
+                  )}
+                </span>
               )}
-              {c.noteOf(s.id) && <span className="note-dot" title={t('Has notes')}><Icon icon="annotation" size={9} /></span>}
               {morphCounts[i] > 0 && (
                 <Tooltip content={morphCounts[i] > 1 ? t('{n} objects carried over from slide {k} (they morph)', { n: morphCounts[i], k: i }) : t('1 object carried over from slide {k} (it morphs)', { k: i })} placement="right" compact>
                   <span className="morph-badge"><Icon icon="exchange" size={9} />{morphCounts[i]}</span>

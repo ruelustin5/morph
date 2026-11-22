@@ -9,6 +9,7 @@ import {
 import { flattenPage } from './render';
 import { fitPage } from './builtin-templates';
 import { themeById, parseRoleId, roleId, COLOR_TOKENS, ROLES, decoRadius } from './themes';
+import { tutorialProject } from './tutorial';
 import { extractAssets, injectAssets, fetchAsset, ensureAsset } from './storage';
 import {
   DbBackend, IdbBackend, saveProject, saveVersion, renameVersion, deleteVersion, loadLatest, loadSave, listSaves, saveDraft, loadDraft, clearDraft,
@@ -589,7 +590,8 @@ export class Controller {
     if (!this.room || !this.project) return;
     const slide = this.project.slides[this.active];
     const sel = (this.store.selectedElementsIds || []).slice(0, 40);
-    const p = { project: this.projectId || null, slide: slide ? slide.id : null, dirty: !!this.dirty, uid: (this.me && this.me.id) || null, sel, nick: this.myName() || null };
+    // The practice presentation is private to this screen: no room, so nobody sees anybody there.
+    const p = { project: this.tutorial ? null : this.projectId || null, slide: slide ? slide.id : null, dirty: !!this.dirty, uid: (this.me && this.me.id) || null, sel, nick: this.myName() || null };
     const key = JSON.stringify(p);
     if (key === this._lastPresence) return;
     this._lastPresence = key;
@@ -639,7 +641,7 @@ export class Controller {
   watchHead() {
     if (this._unwatchHead) { this._unwatchHead(); this._unwatchHead = null; }
     this.newerSave = null;
-    if (!this.backend.watch || this.liveMode) return;
+    if (!this.backend.watch || this.liveMode || this.tutorial) return;
     const id = this.projectId, base = this.projectBase;
     this._unwatchHead = this.backend.watch(`${base}meta/head`, (head) => {
       if (id !== this.projectId) return;
@@ -675,6 +677,7 @@ export class Controller {
   }
 
   statusFromSave() {
+    if (this.tutorial) return { kind: 'ok', text: t('Practice: nothing is saved') };
     if (this.live) return { kind: 'ok', text: this.lastSavedAt ? t('Last version {when}', { when: fmtWhen(this.lastSavedAt) }) : t('No version yet') };
     if (this.backend.kind === 'cloud') return { kind: 'ok', text: this.lastSavedAt ? t('Saved {when}', { when: fmtWhen(this.lastSavedAt) }) : t('Not saved yet') };
     return { kind: 'warn', text: this.lastSavedAt ? t('Saved in this browser {when}', { when: fmtWhen(this.lastSavedAt) }) : t('Saving in this browser only') };
@@ -682,6 +685,7 @@ export class Controller {
 
   /** Open a project from the project list (loads its newest valid save). */
   async openProject(id, opts = {}) {
+    this.tutorial = null;
     if (this.liveMode) return this.openProjectLive(id, opts);
     const { silent = false } = opts;
     const entry = (this.projects || []).find((x) => x.id === id);
@@ -778,6 +782,7 @@ export class Controller {
   }
 
   async openProjectLive(id, { silent = false, quiet = false } = {}) {
+    this.tutorial = null;
     const entry = (this.projects || []).find((x) => x.id === id);
     if (!entry && !this.isOwner) return false;
     const { be, base } = this.scopeFor(entry || { base: baseFor(id) });
@@ -1074,6 +1079,7 @@ export class Controller {
   }
 
   async newProject() {
+    this.tutorial = null;
     if (this.liveMode) {
       await this.closeLive();
       await this.createProject({ version: 1, title: t('Untitled presentation'), width: this.project ? this.project.width : 1920, height: this.project ? this.project.height : 1080, fonts: [], slides: [{ id: null, page: blankPage(), anim: {} }], objects: {} }, { open: true });
@@ -1388,6 +1394,41 @@ export class Controller {
     this.project.objects[id] = { name };
   }
 
+  // ---- tutorial (a practice presentation that is never saved) -------------------------------
+  async startTutorial() {
+    if (this.tutorial) return;
+    const back = { id: this.projectId, active: this.active };
+    if (this.live) await this.closeLive();
+    if (this._unwatchHead) { this._unwatchHead(); this._unwatchHead = null; }
+    clearTimeout(this._draftTimer);
+    this.tutorial = { back };
+    this.projectId = '__tutorial';
+    this.projectBase = null;
+    this.saves = [];
+    this.lastSavedAt = null;
+    this.pendingDraft = null;
+    this.newerSave = null;
+    this.ui = { ...this.ui, mine: false, tplAt: null };
+    this.setProject(tutorialProject(), 0);
+    this.dirty = false;
+    this.status = { kind: 'ok', text: t('Practice: nothing is saved') };
+    this.people = null;
+    this.pushPresence();
+    this.emitNow();
+  }
+
+  /** Leave the practice presentation and reopen the one that was open before. */
+  async endTutorial() {
+    if (!this.tutorial) return;
+    const back = this.tutorial.back || {};
+    this.tutorial = null;
+    let ok = false;
+    if (back.id && back.id !== '__tutorial') ok = await this.openProject(back.id, { silent: true });
+    if (!ok && this.projects && this.projects.length) ok = await this.openProject(this.projects[0].id, { silent: true });
+    if (ok && back.active) this.selectSlide(Math.min(back.active, this.project.slides.length - 1));
+    if (!ok) { this.project = null; this.emitNow(); }
+  }
+
   // ---- speaker notes and slide owners ---------------------------------------------------------
   noteOf(sid) { return (this.project && this.project.notes && this.project.notes[sid]) || ''; }
 
@@ -1403,7 +1444,7 @@ export class Controller {
 
   /** This person's key in the open project: 'owner' for the space owner, else their link's id. */
   myKey() {
-    if (this.isOwner) return 'owner';
+    if (this.isOwner || this.tutorial) return 'owner';
     const k = this.keyring.find((x) => x.pid === this.projectId);
     return (k && k.personKey) || null;
   }
@@ -1421,6 +1462,7 @@ export class Controller {
   /** People who can be given slides: the owner and everyone with a link to this project. */
   async refreshPeople() {
     const pid = this.projectId;
+    if (this.tutorial) { this.people = [{ key: this.myKey() || 'owner', name: this.myName() || t('Me') }]; this.emitNow(); return; }
     const out = [];
     const ownerName = this.isOwner ? ((this.me && this.me.name) || this.myName() || t('Me')) : ((this.keyring.find((x) => x.pid === pid) || {}).ownerName || t('Owner'));
     out.push({ key: 'owner', name: ownerName });
@@ -1552,11 +1594,12 @@ export class Controller {
   markDirty() {
     this.dirty = true;
     this.editCount = (this.editCount || 0) + 1;
-    if (this.status.kind !== 'saving') this.status = this.live ? this.statusFromSave() : { kind: 'dirty', text: t('Unsaved changes') };
+    if (this.tutorial) this.status = { kind: 'ok', text: t('Practice: nothing is saved') };
+    else if (this.status.kind !== 'saving') this.status = this.live ? this.statusFromSave() : { kind: 'dirty', text: t('Unsaved changes') };
     if (this.live) { this.scheduleIndexUpdate(); this.editsSinceVersion = true; this.noteAuthor(this.me_()); }
     clearTimeout(this._draftTimer);
     const pid = this.projectId;
-    if (!this.live) {
+    if (!this.live && !this.tutorial) {
       this._draftTimer = setTimeout(() => {
         if (pid !== this.projectId) return;
         saveDraft(pid, this.project, { dirty: true, active: this.active });
@@ -1924,6 +1967,7 @@ export class Controller {
   }
 
   async save({ force = false } = {}) {
+    if (this.tutorial) { this.toast(t('This is the practice presentation: nothing here is saved.'), 'none'); return; }
     if (this.live) {
       // Everything is saved continuously; Ctrl+S just makes sure the last edits are written.
       await this.live.flushAll();

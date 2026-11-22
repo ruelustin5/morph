@@ -136,7 +136,7 @@ const HELP = [
   ['L', 'Laser pointer'], ['F', 'Full screen'], ['Home End', 'First / last'], ['Esc', 'Exit'],
 ];
 
-export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onExit, useHash = false }) {
+export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onExit, useHash = false, keyboard = true, autofocus = true }) {
   const slides = project.slides;
   const W = project.width, H = project.height;
   if (!document.getElementById('mp-style')) {
@@ -251,6 +251,9 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   const PREV_KEYS = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p', 'P'];
   function onKey(e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    // Typing in a field (speaker notes while presenting) is not a slide command.
+    const tg = e.target;
+    if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName || ''))) return;
     const k = e.key;
     const handled = [...NEXT_KEYS, ...PREV_KEYS, 'Home', 'End', 'f', 'F', 'Escape', 'Delete', 'b', 'B', '.', 'w', 'W', ',', 'l', 'L', '?', 'F5', 'Tab'];
     if (handled.includes(k)) e.stopPropagation();
@@ -305,7 +308,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(layout) : null;
   if (ro) ro.observe(view);
   window.addEventListener('resize', layout);
-  window.addEventListener('keydown', onKey, true);
+  if (keyboard) window.addEventListener('keydown', onKey, true);
   view.addEventListener('click', onClick);
   view.addEventListener('mousemove', wake);
   view.addEventListener('mousemove', moveDot);
@@ -318,7 +321,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   showStatic(index);
   updateUi();
   wake();
-  setTimeout(() => { try { view.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
+  if (autofocus) setTimeout(() => { try { view.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
 
   return {
     next, prev, go: (i) => go(i, false), get index() { return index; },

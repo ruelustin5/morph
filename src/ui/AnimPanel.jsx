@@ -11,12 +11,14 @@ import { MotionIcon, Avatar } from './People';
 import { t } from '../i18n';
 
 const TYPE_ICON = { text: 'font', image: 'media', svg: 'media', gif: 'media', figure: 'square', line: 'minus', video: 'video' };
+const TYPE_NAME = { text: 'Text', image: 'Picture', svg: 'Picture', gif: 'Picture', figure: 'Shape', line: 'Line', video: 'Video', group: 'Group' };
 
 // ---------------------------------------------------------------------------
 // Mini preview: replays the transition into / out of the current slide.
 // ---------------------------------------------------------------------------
-const MiniPreview = forwardRef(function MiniPreview({ c }, ref) {
+const MiniPreview = forwardRef(function MiniPreview({ c, sel = [] }, ref) {
   const hostRef = useRef(null);
+  const [scale, setScale] = useState(0);
   const stageRef = useRef(null);
   const runRef = useRef(null);
   const timerRef = useRef(0);
@@ -28,7 +30,9 @@ const MiniPreview = forwardRef(function MiniPreview({ c }, ref) {
   const fit = () => {
     const host = hostRef.current, st = stageRef.current;
     if (!host || !st) return;
-    st.style.transform = `scale(${host.clientWidth / p.width})`;
+    const k = host.clientWidth / p.width;
+    st.style.transform = `scale(${k})`;
+    if (Math.abs(k - scale) > 1e-4) setScale(k);
   };
 
   useLayoutEffect(() => {
@@ -81,14 +85,22 @@ const MiniPreview = forwardRef(function MiniPreview({ c }, ref) {
     <div className="mini">
       <div className="mini-screen" ref={hostRef} style={{ aspectRatio: `${p.width} / ${p.height}` }} onClick={() => play(i > 0 ? 'in' : 'out')}>
         {playing && <span className="mini-badge">{playing === 'in' ? `${i} → ${i + 1}` : `${i + 1} → ${i + 2}`}</span>}
+        {!playing && scale > 0 && sel.map((id) => {
+          const el = findRaw(p.slides[i].page, id);
+          if (!el) return null;
+          return (
+            <span key={id} className="mini-sel" style={{
+              left: el.x * scale - 2, top: el.y * scale - 2, width: (el.width || 0) * scale + 4, height: (el.height || 0) * scale + 4,
+              transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+            }} />
+          );
+        })}
       </div>
       <div className="mini-actions">
-        <Tooltip content={i === 0 ? t('First slide') : t('Play slide {a} → {b}', { a: i, b: i + 1 })} compact placement="bottom">
-          <Button small minimal icon="play" disabled={i === 0} onClick={() => play('in')} text={i === 0 ? '—' : `${i} → ${i + 1}`} />
-        </Tooltip>
-        <Tooltip content={i >= n - 1 ? t('Last slide') : t('Play slide {a} → {b}', { a: i + 1, b: i + 2 })} compact placement="bottom">
-          <Button small minimal rightIcon="play" disabled={i >= n - 1} onClick={() => play('out')} text={i >= n - 1 ? '—' : `${i + 1} → ${i + 2}`} />
-        </Tooltip>
+        <Button small minimal icon="play" disabled={i === 0} onClick={() => play('in')}
+          text={i === 0 ? t('First slide') : t('Play {a} → {b}', { a: i, b: i + 1 })} />
+        <Button small minimal icon="play" disabled={i >= n - 1} onClick={() => play('out')}
+          text={i >= n - 1 ? t('Last slide') : t('Play {a} → {b}', { a: i + 1, b: i + 2 })} />
       </div>
     </div>
   );
@@ -103,7 +115,7 @@ function Duration({ value, onChange }) {
       <div className="chips" role="radiogroup" aria-label={t('Duration')}>
         {SPEEDS.map(([d, label]) => (
           <button key={d} type="button" role="radio" aria-checked={Math.abs(value - d) < 1e-6}
-            className={'chip' + (Math.abs(value - d) < 1e-6 ? ' is-active' : '')} onClick={() => onChange(d)}>{t(label)}</button>
+            className={'chip' + (Math.abs(value - d) < 1e-6 ? ' is-active' : '')} onClick={() => onChange(d)}>{t(label)} <small>{d} s</small></button>
         ))}
       </div>
       <NumericInput
@@ -129,9 +141,9 @@ function Duration({ value, onChange }) {
 function Timing({ s, onPatch }) {
   return (
     <div className="timing">
-      <div className="t-label">{t('Duration')}</div>
+      <div className="t-label">{t('How long it takes')}</div>
       <Duration value={s.duration} onChange={(v) => onPatch({ duration: v })} />
-      <div className="t-label">{t('Motion')}</div>
+      <div className="t-label">{t('How it moves')}</div>
       <CurvePicker value={s.easing} onChange={(v) => onPatch({ easing: v })} />
     </div>
   );
@@ -153,16 +165,16 @@ function Choice({ value, options, onChange }) {
 }
 
 const moveOpts = () => [
-  { value: 'morph', icon: 'exchange', label: t('Morph'), hint: t('Moves and changes smoothly') },
-  { value: 'jump', icon: 'lightning', label: t('Jump'), hint: t('Switches at once') },
+  { value: 'morph', icon: 'exchange', label: t('Morph'), hint: t('Moves and changes smoothly into its new look') },
+  { value: 'jump', icon: 'lightning', label: t('Jump'), hint: t('Takes its new look at once, when the slide changes') },
 ];
 const inOpts = () => [
   { value: 'fade', icon: 'eye-open', label: t('Fade in'), hint: t('Appears gradually') },
-  { value: 'none', icon: 'disable', label: t('Just appear'), hint: t('Shows up at once') },
+  { value: 'none', icon: 'disable', label: t('Just appear'), hint: t('Is there at once, when the slide changes') },
 ];
 const outOpts = () => [
   { value: 'fade', icon: 'eye-off', label: t('Fade out'), hint: t('Disappears gradually') },
-  { value: 'none', icon: 'disable', label: t('Just disappear'), hint: t('Goes away at once') },
+  { value: 'none', icon: 'disable', label: t('Just disappear'), hint: t('Is gone at once, when the slide changes') },
 ];
 
 /** "Arrives" or "Leaves": one block per group of selected objects (on the neighbour slide or not). */
@@ -172,12 +184,6 @@ function Step({ kind, title, edge, groups, onPlay, playTip }) {
       <header>
         <Icon icon={kind === 'in' ? 'log-in' : 'log-out'} size={14} className="step-icon" />
         <span className="step-title">{title}</span>
-        <span className="phase-spacer" />
-        {onPlay && (
-          <Tooltip content={playTip} compact placement="left">
-            <Button small minimal icon="play" onClick={onPlay} aria-label={playTip} />
-          </Tooltip>
-        )}
       </header>
       {edge && <p className="step-say">{edge}</p>}
       {!edge && groups.map((g) => (
@@ -192,16 +198,29 @@ function Step({ kind, title, edge, groups, onPlay, playTip }) {
   );
 }
 
-/** Slide before → this slide → slide after, with what happens on each arrow. */
-function Journey({ i, n, inWord, outWord, onPlay }) {
+/** Slide before → this slide → slide after, with what happens to the object on each arrow. */
+function Journey({ c, i, n, inWord, outWord }) {
+  const box = (k, cur) => (k < 0 || k >= n
+    ? <span className="j-slide is-none" title={k < 0 ? t('First slide') : t('Last slide')}>–</span>
+    : <button type="button" className={'j-slide' + (cur ? ' is-cur' : '')} disabled={cur} onClick={() => c.selectSlide(k)}
+        title={cur ? t('This slide') : t('Go to slide {k}', { k: k + 1 })} aria-label={t('Slide {n}', { n: k + 1 })}>{k + 1}</button>);
+  const arrow = (word, off) => (
+    <span className={'j-arrow' + (off ? ' is-off' : '')}>
+      <span className="j-word">{word || '\u00a0'}</span>
+      <span className="j-line" aria-hidden="true" />
+    </span>
+  );
   return (
-    <div className="journey" aria-label={t('What happens to it')}>
-      <span className={'j-slide' + (i === 0 ? ' is-none' : '')}>{i > 0 ? i : '·'}</span>
-      <button type="button" className="j-arrow" disabled={i === 0} onClick={() => onPlay('in')} title={t('Play')}><span>{inWord}</span></button>
-      <span className="j-slide is-cur">{i + 1}</span>
-      <button type="button" className="j-arrow" disabled={i >= n - 1} onClick={() => onPlay('out')} title={t('Play')}><span>{outWord}</span></button>
-      <span className={'j-slide' + (i >= n - 1 ? ' is-none' : '')}>{i < n - 1 ? i + 2 : '·'}</span>
+    <>
+    <div className="j-cap">{t('What happens to it, slide by slide')}</div>
+    <div className="journey" aria-label={t('What happens to it, slide by slide')}>
+      {box(i - 1)}
+      {arrow(inWord, i === 0)}
+      {box(i, true)}
+      {arrow(outWord, i >= n - 1)}
+      {box(i + 1)}
     </div>
+    </>
   );
 }
 
@@ -281,11 +300,16 @@ function ObjectHead({ c, id, el, onSlides }) {
   const i = c.active;
   const fresh = !!(p.objects[id] && p.objects[id].fresh);
   const prevK = nearestPrevWith(p, i, id);
+  const [more, setMore] = useState(false);
   return (
     <div className="obj-head-wrap">
+      <div className="obj-what">
+        <Icon icon={TYPE_ICON[el && el.type] || 'cube'} size={14} />
+        <b>{t(TYPE_NAME[el && el.type] || 'Object')}</b>
+        <span className="muted ellipsis">{labelOf(el)}</span>
+      </div>
       <div className="obj-head">
-        <div className="obj-type"><Icon icon={TYPE_ICON[el && el.type] || 'cube'} size={14} /></div>
-        <Tooltip content={t('Objects with the same ID on two slides in a row morph into each other.')} compact placement="bottom-start"><label className="id-label" htmlFor="obj-id">ID</label></Tooltip>
+        <label className="id-label" htmlFor="obj-id">ID</label>
         <InputGroup
           id="obj-id"
           value={val}
@@ -297,16 +321,8 @@ function ObjectHead({ c, id, el, onSlides }) {
           className="id-input"
           spellCheck={false}
         />
-        <Popover isOpen={linkOpen} onInteraction={(o) => { setLinkOpen(o); if (!o) setPreset(null); }} placement="bottom-end" minimal popoverClassName="link-pop"
-          content={<LinkPopoverContent key={(preset && preset.id) || 'x'} c={c} id={id} preset={preset} onDone={() => { setLinkOpen(false); setPreset(null); }} />}>
-          <Tooltip content={t('Same object as…')} compact placement="bottom" disabled={linkOpen}>
-            <Button small icon="link" aria-label={t('Same object as…')} active={linkOpen} />
-          </Tooltip>
-        </Popover>
-        <Tooltip content={t('Make it a separate object here')} compact placement="bottom-end">
-          <Button small icon="unlink" aria-label={t('Make it a separate object here')} disabled={onSlides.length < 2} onClick={() => c.dissociate(id)} />
-        </Tooltip>
       </div>
+      <p className="id-help">{t('Objects with the same ID on slides in a row are the same object: it morphs from one slide to the next.')}</p>
       {taken && (
         <div className="id-taken">
           <span><b>{taken.name}</b> {t('exists')}</span>
@@ -322,16 +338,30 @@ function ObjectHead({ c, id, el, onSlides }) {
             <button type="button" className={'slide-chip' + (k === i ? ' is-current' : '')} onClick={() => c.gotoObject(k, id)}>{k + 1}</button>
           </Tooltip>
         ))}
-        <span className="phase-spacer" />
-        <Tooltip content={prevK < 0 ? t('Not on an earlier slide') : t('Back to its look on slide {k}', { k: prevK + 1 })} compact placement="bottom-end">
-          <Button small minimal icon="reset" disabled={prevK < 0} onClick={() => c.resetToPrevious(id)} aria-label={t('Reset its look')} text={prevK < 0 ? null : prevK + 1} />
+      </div>
+      <div className="obj-actions">
+        <Popover isOpen={linkOpen} onInteraction={(o) => { setLinkOpen(o); if (!o) setPreset(null); }} placement="bottom-start" minimal popoverClassName="link-pop"
+          content={<LinkPopoverContent key={(preset && preset.id) || 'x'} c={c} id={id} preset={preset} onDone={() => { setLinkOpen(false); setPreset(null); }} />}>
+          <Tooltip content={t('Give it the ID of an object on another slide, so they morph into each other.')} compact placement="bottom" disabled={linkOpen}>
+            <Button small icon="link" text={t('Same object as…')} active={linkOpen} />
+          </Tooltip>
+        </Popover>
+        <Tooltip content={onSlides.length < 2 ? t('It is only on this slide.') : t('Gives it a new ID on this slide only: it stops morphing from and to the other slides.')} compact placement="bottom">
+          <Button small icon="unlink" text={t('Separate here')} disabled={onSlides.length < 2} onClick={() => c.dissociate(id)} />
         </Tooltip>
       </div>
-      <div className="obj-props">
-        <Tooltip content={fresh ? t('Duplicated slides get a new, separate copy') : t('Duplicated slides keep the same object (it morphs)')} compact placement="bottom" className="prop-tip">
-          <Switch small checked={!fresh} onChange={(e) => c.setFresh(id, !e.currentTarget.checked)} label={t('Same object in duplicates')} alignIndicator="right" />
-        </Tooltip>
-      </div>
+      <button type="button" className="obj-more-toggle" aria-expanded={more} onClick={() => setMore(!more)}>
+        <Icon icon={more ? 'chevron-down' : 'chevron-right'} size={12} /> {t('More options')}
+      </button>
+      {more && (
+        <div className="obj-more">
+          <Button small minimal icon="reset" disabled={prevK < 0} onClick={() => c.resetToPrevious(id)}
+            text={prevK < 0 ? t('Not on an earlier slide') : t('Copy its look from slide {k}', { k: prevK + 1 })} />
+          <Switch small checked={!fresh} onChange={(e) => c.setFresh(id, !e.currentTarget.checked)} alignIndicator="right"
+            label={t('Copies of this slide keep this ID')} />
+          <p className="id-help">{fresh ? t('Off: when you duplicate the slide, the copy gets a new object that does not morph.') : t('On: when you duplicate the slide, the copy has the same object, so it morphs.')}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -464,23 +494,23 @@ export const AnimPanel = observer(function AnimPanel({ c }) {
           ? <ObjectHead c={c} id={id} el={el} onSlides={onSlides} />
           : <div className="obj-head multi"><Icon icon="layers" size={14} /> <b>{t('{n} objects', { n: sel.length })}</b></div>}
         <EditingNotice c={c} ids={sel} />
-        <Journey i={i} n={n} inWord={word(i === 0 ? [] : inGroups, '')} outWord={word(i >= n - 1 ? [] : outGroups, '')} onPlay={play} />
-        <Step kind="in" title={t('Arrives')} groups={inGroups}
-          edge={i === 0 ? t('This is the first slide: it is there from the start.') : null}
-          onPlay={i > 0 ? () => play('in') : null} playTip={t('Play slide {a} → {b}', { a: i, b: i + 1 })} />
-        <Step kind="out" title={t('Leaves')} groups={outGroups}
-          edge={i === n - 1 ? t('This is the last slide: nothing comes after.') : null}
-          onPlay={i < n - 1 ? () => play('out') : null} playTip={t('Play slide {a} → {b}', { a: i + 1, b: i + 2 })} />
+        <Journey c={c} i={i} n={n} inWord={word(i === 0 ? [] : inGroups, '')} outWord={word(i >= n - 1 ? [] : outGroups, '')} />
+        <Step kind="in" title={i === 0 ? t('Arrives') : t('Arrives from slide {a}', { a: i })} groups={inGroups}
+          edge={i === 0 ? t('This is the first slide: it is there from the start.') : null} />
+        <Step kind="out" title={i >= n - 1 ? t('Leaves') : t('Leaves to slide {b}', { b: i + 2 })} groups={outGroups}
+          edge={i === n - 1 ? t('This is the last slide: nothing comes after.') : null} />
+        <p className="anim-foot">{t('Everything starts when the slide changes, all at once. Going back to an earlier slide shows it without animation.')}</p>
       </div>
     );
   }
 
   return (
     <aside className="anim" aria-label={t('Animation')}>
-      <div className="anim-head"><MotionIcon /> {t('Animation')} <span className="anim-slide muted">{i + 1} / {n}</span>
+      <div className="anim-head"><MotionIcon /> {t('Animation')} <span className="anim-slide muted">{t('Slide {a} of {b}', { a: i + 1, b: n })}</span>
+        <Tooltip content={t('Learn how it works (tutorial)')} compact placement="bottom-end"><Button small minimal icon="help" aria-label={t('Learn how it works (tutorial)')} onClick={() => c.setUi({ tour: 'ask' })} /></Tooltip>
         {c.closeAnim && <Tooltip content={t('Hide')} compact placement="bottom-end"><Button small minimal icon="cross" className="anim-close" aria-label={t('Hide the animation panel')} onClick={c.closeAnim} /></Tooltip>}
       </div>
-      <MiniPreview c={c} ref={previewRef} />
+      <MiniPreview c={c} ref={previewRef} sel={sel} />
       {body}
     </aside>
   );

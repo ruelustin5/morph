@@ -4,8 +4,18 @@ import { t } from '../i18n';
 
 // Plain names for the speed curves.
 export const CURVE_NAMES = {
-  linear: 'Steady', ease: 'Smooth', 'ease-in': 'Slow start', 'ease-out': 'Slow end', 'ease-in-out': 'Slow start and end',
+  linear: 'Steady', ease: 'Natural', 'ease-in': 'Slow start', 'ease-out': 'Slow end', 'ease-in-out': 'Slow start and end',
   back: 'Overshoot', elastic: 'Elastic', bounce: 'Bounce',
+};
+const CURVE_HELP = {
+  linear: 'The same speed from start to end.',
+  ease: 'Starts a little fast and slows down gently at the end, like most things in real life.',
+  'ease-in': 'Starts slowly, then speeds up.',
+  'ease-out': 'Starts fast, then slows down to stop.',
+  'ease-in-out': 'Slow at the start and at the end, fast in the middle.',
+  back: 'Goes a little too far, then comes back.',
+  elastic: 'Wobbles around the end like a spring before stopping.',
+  bounce: 'Bounces a few times at the end, like a ball.',
 };
 export const curveName = (k) => t(CURVE_NAMES[k] || 'Steady');
 
@@ -45,6 +55,7 @@ export function CurvePicker({ value, onChange, disabled }) {
           role="radio"
           aria-checked={value === k}
           className={'curve-tile' + (value === k ? ' is-active' : '')}
+          title={t(CURVE_HELP[k] || '')}
           disabled={disabled}
           onClick={() => onChange(k)}
         >

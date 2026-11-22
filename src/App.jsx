@@ -140,7 +140,13 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           onConfirm={(v) => { if ((v || '').trim() !== p.title) c.setTitle((v || '').trim()); }}
         />
       )}
-      {p && c.isOwner && c.canShare && (
+      {p && c.tutorial && (
+        <span className="practice-tag">
+          <Icon icon="learning" size={12} /> {t('Practice')}
+          <Button small minimal icon="log-out" text={t('Leave')} onClick={() => { c.setUi({ tour: null }); c.endTutorial(); }} />
+        </span>
+      )}
+      {p && c.isOwner && c.canShare && !c.tutorial && (
         <Tooltip content={c.projectShared ? t('Shared: manage who can open it') : t('Private: share it')} placement="bottom" compact>
           <Button small minimal icon={c.projectShared ? 'people' : 'lock'} className={'share-chip' + (c.projectShared ? ' is-shared' : '')}
             text={c.projectShared ? t('Shared') : null} onClick={onShare} aria-label={t('Share')} />
@@ -165,9 +171,9 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
         </span>
       )}
       <SaveStatus c={c} />
-      {c.live ? (
+      {c.tutorial ? null : c.live ? (
         <Tooltip content={t('Version history')} placement="bottom" compact>
-          <Button minimal icon="history" aria-label={t('Version history')} onClick={onHistory} disabled={!p} />
+          <Button minimal icon="history" aria-label={t('Version history')} onClick={onHistory} disabled={!p || !!c.tutorial} />
         </Tooltip>
       ) : (
         <ButtonGroup className="save-group">
@@ -189,7 +195,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           }} />
           {c.isOwner && <MenuItem icon="folder-open" text={t('Open project file…')} onClick={() => fileRef.current && fileRef.current.click()} />}
           <MenuItem icon="translate" text={LANG === 'fr' ? 'English' : 'Français'} onClick={() => setLang(LANG === 'fr' ? 'en' : 'fr')} />
-          <MenuItem icon="help" text={t('Take the tour')} onClick={() => c.setUi({ tour: 0 })} />
+          <MenuItem icon="learning" text={t('Tutorial')} onClick={() => c.setUi({ tour: 'ask' })} />
           {typeof window !== 'undefined' && window.__web && window.__web.configured && (c.isOwner
             ? <MenuItem icon="log-out" text={t('Sign out')} onClick={async () => { await window.__web.signOut(); window.location.reload(); }} />
             : <MenuItem icon="log-in" text={t('This is my space: sign in')} onClick={async () => {
@@ -266,7 +272,7 @@ export const App = observer(function App({ c, store }) {
   const calm = ready && !!c.project && !c.busy && !c.needsName && !c.pendingDraft && presenting == null && !projectsOpen && !shareId && !historyOpen && c.ui.tplAt == null && c.ui.tour == null;
   useEffect(() => {
     if (!calm || tourSeen() || (typeof navigator !== 'undefined' && navigator.webdriver && !window.__morphTour)) return undefined;
-    const tm = setTimeout(() => { if (c.ui.tour == null) c.setUi({ tour: 0 }); }, 1200);
+    const tm = setTimeout(() => { if (c.ui.tour == null) c.setUi({ tour: 'ask' }); }, 1200);
     return () => clearTimeout(tm);
   }, [calm]);
   c.closeAnim = () => setAnimOpen(false);

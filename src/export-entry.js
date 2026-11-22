@@ -18,11 +18,12 @@ function boot() {
   const ctx = {
     size: (src) => sizes.get(src) || null,
   };
-  let start = 0;
-  const m = /^#(\d+)$/.exec(location.hash || '');
-  if (m) start = Math.max(0, Math.min(project.slides.length - 1, parseInt(m[1], 10) - 1));
+  // Always start on the first slide: when the file is opened, reloaded, or shown again from the
+  // browser's cache (back/forward). An old "#3" in the address is cleared.
+  try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
   const root = document.getElementById('deck') || document.body;
-  createPlayer({ root, project, ctx, startIndex: start, useHash: true });
+  const player = createPlayer({ root, project, ctx, startIndex: 0, useHash: false });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) player.go(0); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => window.dispatchEvent(new Event('resize')));
 }
 
