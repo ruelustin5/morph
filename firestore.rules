@@ -13,9 +13,14 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
-    // Shared projects. Anyone with a session can read and write here, but every document is encrypted
-    // with a key that only that project's links carry, and nothing at this level can be listed.
-    match /sh/{place}/{rest=**} {
+    // Shared projects live under sh/<place>/…, where <place> is a long random id that only that project's
+    // links carry, and every document is encrypted with that project's key.
+    // The sh collection itself can never be read or listed, so places cannot be discovered.
+    match /sh/{place} {
+      allow read, write: if false;
+    }
+    // Inside a known place: anyone with a session (someone who has the link) can read and write.
+    match /sh/{place}/{coll}/{doc=**} {
       allow read, write: if signedIn();
     }
 
@@ -26,9 +31,10 @@ service cloud.firestore {
       allow create, update, delete: if isOwner();
     }
 
-    // Display names shown in version history.
+    // Display names shown in version history: fetched one by one, never listed.
     match /people/{uid} {
-      allow read: if signedIn();
+      allow get: if signedIn();
+      allow list: if false;
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
