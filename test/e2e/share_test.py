@@ -2,7 +2,7 @@ import asyncio, shutil, json
 from playwright.async_api import async_playwright
 FAKE = open('test/e2e/fake-artifact.js').read()
 OUT = '/tmp/'
-URL = 'http://localhost:8765/dist/index.html?roles=1&u='
+URL = 'http://localhost:8766/dist/index.html?roles=1&u='
 async def main():
     shutil.rmtree('/tmp/pw-share', ignore_errors=True)
     async with async_playwright() as p:

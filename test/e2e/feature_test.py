@@ -11,7 +11,7 @@ async def main():
         A = ctx.pages[0]
         A.on('pageerror', lambda e: logs.append(f'[A pageerror] {e}'))
         A.on('console', lambda m: logs.append(f'[A {m.type}] {m.text}') if m.type in ('error','warning') else None)
-        await A.goto('http://localhost:8765/dist/index.html?u=alice'); await A.wait_for_timeout(3500)
+        await A.goto('http://localhost:8766/dist/index.html?u=alice'); await A.wait_for_timeout(3500)
         ev = A.evaluate
         # --- A. versions: name, change, restore
         await ev("window.__morph.controller.nameCurrentVersion('First')"); await A.wait_for_timeout(1500)
@@ -150,7 +150,7 @@ async def main():
         # --- L. guest name prompt
         G = await ctx.new_page()
         G.on('pageerror', lambda e: logs.append(f'[G pageerror] {e}'))
-        await G.goto('http://localhost:8765/dist/index.html?u=guest'); await G.wait_for_timeout(3500)
+        await G.goto('http://localhost:8766/dist/index.html?u=guest'); await G.wait_for_timeout(3500)
         dlg = await G.evaluate("!!document.querySelector('.name-dialog')")
         await G.fill('.name-dialog input', 'Zoé'); await G.keyboard.press('Enter'); await G.wait_for_timeout(1500)
         await A.bring_to_front(); await A.wait_for_timeout(800)

@@ -11,11 +11,11 @@ async def main():
         A = ctx.pages[0]
         A.on('pageerror', lambda e: logs.append(f'[A pageerror] {e}'))
         A.on('console', lambda m: logs.append(f'[A {m.type}] {m.text}') if m.type == 'error' else None)
-        await A.goto('http://localhost:8765/dist/index.html?u=alice'); await A.wait_for_timeout(3500)
+        await A.goto('http://localhost:8766/dist/index.html?u=alice'); await A.wait_for_timeout(3500)
         B = await ctx.new_page()
         B.on('pageerror', lambda e: logs.append(f'[B pageerror] {e}'))
         B.on('console', lambda m: logs.append(f'[B {m.type}] {m.text}') if m.type == 'error' else None)
-        await B.goto('http://localhost:8765/dist/index.html?u=bob'); await B.wait_for_timeout(3500)
+        await B.goto('http://localhost:8766/dist/index.html?u=bob'); await B.wait_for_timeout(3500)
         a0 = await A.evaluate(STATE); b0 = await B.evaluate(STATE)
         print('1. same project & content:', a0['pid'] == b0['pid'], a0['slides'] == b0['slides'])
         # 2. concurrent edits on the same slide, different objects
@@ -54,9 +54,9 @@ async def main():
         b5 = await B.evaluate("(() => { const p = window.__morph.controller.project.slides[0].page; const t = p.children.find(e=>e.type==='text'); const f = p.children.find(e=>e.type==='figure'); return {textFill: t.fill, figX: f.x}; })()")
         print('6. undo kept collaborator change:', a5, b5)
         # 7. animation settings + rename + title
-        await A.evaluate("(() => { const c = window.__morph.controller; const f = c.project.slides[1].page.children[0]; if (f) c.setAnim(1, [f.id], 'enter', {duration: 1.7, easing: 'bounce'}); const t = c.project.slides[0].page.children.find(e=>e.type==='text'); c.rename(t.id, 'Headline'); c.setTitle('Team deck'); })()")
+        await A.evaluate("(() => { const c = window.__morph.controller; const k = c.project.slides.findIndex((x, i) => i > 0 && x.page.children.length); const f = c.project.slides[k] && c.project.slides[k].page.children[0]; window.__k = k; if (f) c.setAnim(k, [f.id], 'enter', {duration: 1.7, easing: 'bounce'}); const t = c.project.slides[0].page.children.find(e=>e.type==='text'); c.rename(t.id, 'Headline'); c.setTitle('Team deck'); })()")
         await A.wait_for_timeout(3000)
-        b6 = await B.evaluate("(() => { const c = window.__morph.controller; const f = c.project.slides[1].page.children[0]; const t = c.project.slides[0].page.children.find(e=>e.type==='text'); return {anim: f ? c.project.slides[1].anim[f.id] : null, name: c.project.objects[t.id], title: c.project.title}; })()")
+        b6 = await B.evaluate("(() => { const c = window.__morph.controller; const t = c.project.slides[0].page.children.find(e=>e.type==='text'); const k = c.project.slides.findIndex((x, i) => i > 0 && x.page.children.length); const f = c.project.slides[k] && c.project.slides[k].page.children[0]; return {k, anim: f ? c.project.slides[k].anim[f.id] : null, name: c.project.objects[t.id], title: c.project.title}; })()")
         print('7. anim/name/title on B:', b6)
         # 8. presence: cursor + selection overlay on B
         await A.evaluate("(() => { const s = window.__morph.store; const f = s.activePage.children.find(e=>e.type==='figure'); s.selectElements([f.id]); })()")
