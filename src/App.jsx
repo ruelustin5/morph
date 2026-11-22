@@ -21,14 +21,15 @@ import { VersionHistory } from './ui/VersionHistory';
 import { CollabOverlay } from './collab-overlay';
 import { OfflineTextSection, OfflineBackgroundSection } from './ui/OfflinePanels';
 import { makeObjectMenu } from './ui/ObjectMenu';
-import { EquationSection } from './ui/EquationPanel';
+import { EquationSection, bindEquations } from './ui/EquationPanel';
 import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
+import { TextFontSize } from './ui/FontSize';
 
 // Duplicate / delete / position are on the selection's own bar and in the right-click menu.
 const Nothing = () => null;
-const TOOLBAR_COMPONENTS = { TextFontFamily, Duplicate: Nothing, Remove: Nothing, Position: Nothing };
+const TOOLBAR_COMPONENTS = { TextFontFamily, TextFontSize, Duplicate: Nothing, Remove: Nothing, Position: Nothing };
 
 // Clicking the open tab again closes the panel (more room for the slide).
 let STORE = null;
@@ -237,6 +238,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
 export const App = observer(function App({ c, store }) {
   useController(c);
   STORE = store;
+  bindEquations(c);
   const toasterRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [presenting, setPresenting] = useState(null);

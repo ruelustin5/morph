@@ -1,6 +1,13 @@
 import React from 'react';
-import { Tooltip } from '@blueprintjs/core';
 import { EASINGS } from '../render';
+import { t } from '../i18n';
+
+// Plain names for the speed curves.
+export const CURVE_NAMES = {
+  linear: 'Steady', ease: 'Smooth', 'ease-in': 'Slow start', 'ease-out': 'Slow end', 'ease-in-out': 'Slow start and end',
+  back: 'Overshoot', elastic: 'Elastic', bounce: 'Bounce',
+};
+export const curveName = (k) => t(CURVE_NAMES[k] || 'Steady');
 
 const W = 44, H = 30, PAD = 5;
 
@@ -30,21 +37,20 @@ export function CurveIcon({ name, size = 1 }) {
 
 export function CurvePicker({ value, onChange, disabled }) {
   return (
-    <div className={'curve-grid' + (disabled ? ' is-disabled' : '')} role="radiogroup" aria-label="Speed curve">
+    <div className={'curve-grid' + (disabled ? ' is-disabled' : '')} role="radiogroup" aria-label={t('Motion')}>
       {Object.entries(EASINGS).map(([k, v]) => (
-        <Tooltip key={k} content={v.label} placement="top" hoverOpenDelay={300} compact>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={value === k}
-            aria-label={v.label}
-            className={'curve-tile' + (value === k ? ' is-active' : '')}
-            disabled={disabled}
-            onClick={() => onChange(k)}
-          >
-            <CurveIcon name={k} />
-          </button>
-        </Tooltip>
+        <button
+          key={k}
+          type="button"
+          role="radio"
+          aria-checked={value === k}
+          className={'curve-tile' + (value === k ? ' is-active' : '')}
+          disabled={disabled}
+          onClick={() => onChange(k)}
+        >
+          <CurveIcon name={k} />
+          <span className="curve-name">{curveName(k)}</span>
+        </button>
       ))}
     </div>
   );
