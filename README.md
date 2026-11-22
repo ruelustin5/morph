@@ -1,179 +1,117 @@
-# Morph — slide editor
+# Morph
 
-A simple PowerPoint-style editor with per-object "morph" animations, multiple projects, saved versions
-and live collaboration.
+**Slides where things move.** Give an object the same ID on two slides in a row, and when you present it glides,
+grows and changes color from one slide to the next, like Keynote's Magic Move or PowerPoint's Morph. In your
+browser, free, and you can edit together with other people at the same time.
 
-## Two versions, one code base
+![The Morph editor: slides on the left, the slide in the middle, speaker notes below, the animation panel on the right](docs/editor.png)
 
-| | Website (`node build.mjs web` → `dist-web/`) | Claude artifact (`node build.mjs` → `dist/`) |
-|---|---|---|
-| Hosting | GitHub Pages, published on every push to `main` (`.github/workflows/deploy.yml`) | claude.ai artifact |
-| Storage, live editing | Firebase free plan: Firestore + Realtime Database (`src/web/platform.js`) | the artifact's `db` and `room` |
-| Who can edit | the owner (Google sign-in) and anyone with a project's magic link, no account | people invited on claude.ai with "Can edit" |
-| Setup | **[SETUP.md](SETUP.md)** | none |
+> **Honest note.** All of this code was written by an AI (Claude, by Anthropic), directed step by step by one person
+> who needed it for real presentations and classes. A 100% human need, 100% AI-written code. It works and it is
+> tested, but expect bugs: for anything important, keep a copy (**⋯ → Download project file**) and the exported `.html`.
 
-`src/web/platform.js` gives the app the same `window.claude.use(name)` services the artifact runtime provides
-(db, room, user, downloads), so everything else is shared. Rules: `firestore.rules`, `database.rules.json`.
-`node build.mjs webtest` builds the website against a fake Firebase (`test/fake-firebase/`) for local tests.
+## What it does
 
-**Magic links** (`https://…/morph/#ABCD-EFGH-JKLM`): the part after `#` is never sent to a server. It opens an
-invite that holds the project's encryption key (see "Your space and sharing" below), the app saves it in that
-browser, and removes it from the address bar. Removing a person gives the project a new key.
+- **Morph animations.** Objects with the same ID on neighbouring slides move and change between them. For each
+  object you choose how it arrives and leaves (morph, jump, fade), how long it takes and how it moves.
+- **Themes.** 10 themes, each with the same 18 layouts (title, section, agenda, points, compare, big number, quote,
+  timeline, definition…). Layouts of a theme share their shapes, so going from one to the next morphs on its own.
+  Once a theme is chosen, **+** offers its layouts. Switch theme later and the slides follow.
+- **Together, without accounts.** Every person you invite gets their own secret link. They open it and they are in,
+  live, with no account. Remove a person and their link stops working.
+- **Speaker notes** for each slide, visible to you while presenting (press **S**), never in the exported file.
+  Slides can be **assigned to someone**, and everyone can show **only their own slides**.
+- **Equations** in LaTeX, with a package manager (physics, mhchem, siunitx, braket, cancel…): turn packages on
+  once for the presentation instead of writing `\usepackage`.
+- **Every Google Font** (1,800+), free **photos** (Openverse, with the credit added to your notes) and **icons** (Iconify).
+- **Present** with the keyboard or a classroom clicker (Page Up/Down, B for a black screen, L for a laser dot), and
+  **export** one standalone `.html` file that plays anywhere, even offline.
+- **Version history** like Google Slides: saved continuously, name a version, go back, make a copy.
+- **English and French**, following your browser.
 
-## What's in it
+![Themes and their layouts](docs/themes.png)
 
-- **Editor**: [OpenPolotno](https://www.npmjs.com/package/@reyka/openpolotno) (MIT), bundled from its TypeScript
-  source and used as-is. The app only configures it (English strings, font list, side-panel sections) and
-  loads one slide at a time into it.
-- **Slides**: the list on the left. Drag to reorder, insert between slides, duplicate (objects stay linked)
-  or "duplicate as new objects", delete with undo, save a slide as a template and start new slides from one
-  (templates are shared by all projects; their objects always get new IDs).
-- **IDs**: every object has an ID (A28, K5…). Shown in capitals, compared without case ("pig" = "PIG").
-  The same ID on two neighbouring slides makes the object move/transform between them. Link = "same object
-  as…": when the object is on several slides you choose *this slide* or *all slides* (e.g. three PIG and
-  three PIGGY: linking one PIG to PIGGY with "all slides" makes the six the same object; slides that already
-  have a PIGGY keep their PIG). Typing an existing ID offers the link instead of an error. A picture added
-  that is already used on another slide offers "Make it the same object". Per object: "Same object in
-  duplicates" (off = duplicated slides and templates get a separate copy).
-- **Animation**: In (morph or jump when it was on the previous slide, otherwise none or fade in) and Out
-  (the next slide's In when it continues, otherwise none or fade out), 8 speed curves, duration.
-  Settings live on the slide where the object arrives, so reordering slides never loses anything.
-  Right-click an object › Animation opens the panel on it.
-- **Equations**: LaTeX with MathJax 3 (`dist/mathjax/tex-svg-full.js` + the `physics` extension, loaded only
-  when the Equation panel opens). All MathJax packages are on (amsmath/amssymb, mathtools, physics, mhchem,
-  braket, cancel, bm, xcolor…); `\usepackage{…}` lines are accepted, and a package MathJax does not have
-  (siunitx, tikz) is reported. Inserted as a self-contained SVG (`custom.latex` keeps the source).
-- **Fonts**: every Google Font with Latin characters (1,891 families, `src/google-fonts.json`, made from the
-  `google-font-metadata` package), searchable and filterable by kind, with classics first.
-- **Templates**: 9 built-in slides (`src/builtin-templates.js`) plus your own (right-click a slide).
-- **Panels**: click the open tab again (or the round arrow) to close the side panel; × or the Animation
-  button closes the animation panel.
-- **Presenting / export**: the same renderer draws thumbnails, the in-app presenter and the standalone
-  `.html` export: space, click, arrows, PageUp/PageDown (presentation clickers), B or "." black screen,
-  W or "," white screen, L laser pointer, F full screen, ? shortcuts, swipe on touch screens.
-- **Versions** (like Google Slides): edits are saved continuously; a version is recorded automatically
-  after 10 minutes of editing, and you can name the current version at any time. Version history shows
-  every version with its authors; restore keeps the current state as a version first; "Make a copy" turns
-  a version into a new project. Old automatic versions are thinned (all of the last 2 h, then hourly for a
-  day, daily for a month); named versions are kept.
+## Try it
 
-## Removed because an artifact cannot reach the internet
+[ruelustin5.github.io/morph](https://ruelustin5.github.io/morph/) is one person's own space: without a link
+someone shared with you, there is nothing to open there. To use Morph yourself, make your own space below. It's free.
 
-Artifacts run in a sandbox: no requests to outside servers, no remote images. These editor features call
-the editor's online API (api.polotno.com, which also needs a paid key) and were removed:
+## Make your own space
 
-| Removed | Where it was | How to bring it back |
-|---|---|---|
-| Templates tab | `DEFAULT_SECTIONS` → `templates` | Keep it in `SECTIONS` in `src/App.jsx` |
-| Photos tab (Unsplash) | `DEFAULT_SECTIONS` → `photos` | Keep it in `SECTIONS` in `src/App.jsx` |
-| Text templates under the quick text buttons | built-in Text panel | Use the built-in `TextSection` instead of `OfflineTextSection` (`src/ui/OfflinePanels.jsx`) |
-| Unsplash photo search in Background | built-in Background panel | Use the built-in `BackgroundSection` instead of `OfflineBackgroundSection` |
-| SVG catalog search in Elements | `store.setShowCustomSvg(false)` in `src/main.jsx` | Set it back to `true` |
-| AI writing tools | `store.setAiToolsEnabled(false)` in `src/main.jsx` | Set it back to `true` |
-
-When hosting it yourself (e.g. a Node/Vite app with internet access), configure the API before creating the store:
-
-```js
-import { setAPI, setApiEndpoints, setAuthorization } from '@reyka/openpolotno/utils/api';
-setApiEndpoints({ urlBase: 'https://api.polotno.com' }); // plus setAuthorization(...) or your own endpoints via setAPI(name, fn)
-```
-
-Outside an artifact, the artifact-only services also need replacing:
-
-| Artifact service | Used for | Replace with |
-|---|---|---|
-| `db` | projects, saved versions, live working copy, images | Firestore (same shape: documents, `onSnapshot`, leases → transactions) |
-| `room` | who is online, cursors, live drags, selections | WebSocket / Liveblocks / Firebase presence |
-| `user` | names and avatars | your auth provider |
-| `downloads` | export / project file | a normal `<a download>` |
-
-`src/storage.js` has a browser-only fallback (IndexedDB) that already works without any of them, minus collaboration.
-
-## Your space and sharing
-
-The artifact is its owner's space. The database rules (declared with the artifact) are:
-
-| Path | Read | Write | Holds |
-|---|---|---|---|
-| everything at the root | owner | owner | private projects, project list, templates, share settings (`shares/<id>`) |
-| `sh/<place>/…` | anyone who can open the artifact | Contributor and up | shared projects, every document encrypted |
-| `inv/<codeId>` | anyone who can open the artifact | owner | invites |
-| `pub/space` | anyone who can open the artifact | owner | who owns the space (for "Ana's space") |
-| `data/users/<id>/keys` | that person only (built in) | that person | the projects they joined |
-
-- **Private** projects are protected by the rules: nobody but the owner can read them.
-- **Sharing** a project moves it to `sh/<place>/` and encrypts every document with that project's own
-  AES-256-GCM key (WebCrypto, gzip before encryption, the path bound as additional data). A code
-  (`ABCD-EFGH-JKLM`, 60 random bits) opens an invite: the project key encrypted with a key derived from the
-  code (PBKDF2-SHA256, 150,000 rounds). Without a code the shared data is unreadable, even to people who can
-  open the artifact. `src/space.js` has the encryption layer (`ScopedBackend`), codes and copying.
-- **Removing someone who joined** moves the project to a new place with a new key and re-issues the
-  remaining codes; open screens follow a `live/moved` marker, and the old place is emptied. **Stop sharing**
-  moves it back to the private part.
-- Artifact version: people also need to be invited to the artifact on claude.ai with "Can edit".
-  Website version: the link is enough; the owner signs in with Google (the first Google sign-in claims the
-  site), visitors are anonymous Firebase users.
-- Limits: someone with a link can do anything inside that project (like a Google Slides editor), and
-  anyone with a session could delete encrypted data they cannot read.
-
-## Live collaboration (how it stays correct)
-
-Shared working copy per project in the database:
+You need a **GitHub account** and a **Google account**. No credit card, no server to rent, about 20 minutes.
 
 ```
-<base>live/meta          slide order, title, size, fonts, object names, rev
-<base>live/s-<slideId>   one slide: page JSON (images as references) + animation settings, rev
-assets/<hash>            images and fonts, stored once, shared by everything
-<base>meta/head          version list (+ head2 mirror); each version in <base>saves/<slot>
-templates/<id>           slide templates (all projects)
+your copy of this code (GitHub)  ──►  your website (GitHub Pages, free)
+                                          │
+                                          ▼
+                       your projects (Firebase, free "Spark" plan, Google)
 ```
 
-- Each screen remembers the last version it knows of every document (its *base*). Its own edits are
-  `diff(base, current)`, computed at attribute level (`src/sync-core.js`).
-- Writing: wait ~250 ms (max 1 s), take a short lease on the document, read the latest version, apply
-  my edits on top, write with `rev + 1`. Two people editing different things never overwrite each other;
-  the same attribute at the same time → last writer wins, and every screen converges.
-- Receiving: my unwritten edits are re-applied on top of what arrived, then the open slide in the editor
-  is updated in place (MobX `applySnapshot`, so selection and drags are not disturbed).
-- Undo only undoes your own edits: incoming changes are applied to every step of the editor's undo history too.
-- Live drags are shown by moving the canvas shape only (presence data at ~30 fps); the document itself only
-  changes through the merged versions.
-- Screen-only fields (`_editModeEnabled`, layer names) are never synced; tiny text-height measurement
-  differences between browsers are ignored so they cannot bounce back and forth.
-- Saving while someone else edits is safe: there is no "save the whole file" step that could overwrite
-  others. A version is a read-only snapshot of the shared state; restoring writes that state as ordinary
-  edits for everyone, after recording the current state as a "Before restoring" version.
-- Two people giving two objects the same ID at the same moment: the names are normalised the same way on
-  every screen (`normalizeRegistry`), so one gets a suffix (PIG-K3) everywhere.
+1. **Fork** this repository: the **Fork** button at the top of this page, then **Create fork**.
+2. **Create a Firebase project** with sign-in, a database and their security rules
+   ([SETUP.md](SETUP.md), steps 1 to 5).
+3. **Put your Firebase settings** and your site's address into `src/web/firebase-config.js` ([SETUP.md](SETUP.md), step 6).
+4. **Turn on GitHub Pages** for your fork ([SETUP.md](SETUP.md), step 7).
+5. **Open your site** (`https://YOUR-GITHUB-NAME.github.io/morph/`) and click **This is my space: sign in**.
+   The first Google account to do this owns the space.
 
-## Build
+Step-by-step instructions, with what you should see after each step and fixes for common problems: **[SETUP.md](SETUP.md)**.
+
+### The lazy way: let an AI agent do it
+
+If you use an AI agent that can control your browser (for example Claude in Chrome), sign in to
+**github.com** and **console.firebase.google.com** yourself first, then give it this:
+
+````text
+Set up my own copy of Morph, a slide editor, by following SETUP.md in https://github.com/ruelustin5/morph exactly,
+step by step. I am already signed in to github.com and console.firebase.google.com in this browser.
+
+Rules:
+- Use only the free Firebase "Spark" plan. Never upgrade to Blaze, never open billing, never enter payment details.
+- Never type a password. If a sign-in is needed, stop and ask me to do it.
+- Fork the repository to my GitHub account (keep the name "morph") instead of creating one from scratch.
+- After each step, check the "✔" line of that step in SETUP.md. If what you see is different, stop and tell me
+  what you see instead of guessing.
+- When editing src/web/firebase-config.js, replace every value, including site (my GitHub name + ".github.io").
+- Paste firestore.rules and database.rules.json exactly as they are in my fork, then click Publish.
+- At the end, open my site, tell me its address, and tell me to click "This is my space: sign in" myself.
+````
+
+## Is it safe?
+
+The code is public on purpose, and that is fine: the protection does not come from hiding the code but from
+**Firebase's security rules**, which run on Google's servers and are checked on every read and write.
+
+| What | Where it is | Who can read it |
+|---|---|---|
+| Your private projects | Firebase (Firestore) | Only your Google account. The rules refuse everyone else. |
+| A shared project | Firebase, under a long random place name | Only people with a link. It is **encrypted in the browser** (AES-256-GCM) before it is sent: Firebase only stores scrambled data. |
+| A project's key | Inside the link, after the `#` | Browsers never send the part after `#` to any server. |
+| People's names | Inside the encrypted project, and in the live "who's here" of that project | Only people with that project's link. |
+| This repository | GitHub, public | Everyone. It has **no secrets and no personal information**. The Firebase settings in `firebase-config.js` only say which project to use; Google designed them to be public. |
+
+- Removing someone gives the project a new key and re-issues the other links, so an old link (or a copy of the old
+  data) is useless.
+- Nobody can list the shared places, create new ones, or claim a space that already has an owner.
+- A copy published at another address that still has someone else's settings refuses to connect to their Firebase
+  and shows how to set up its own.
+- Limits to know: anyone with a project's link can edit or delete that project (like an editor in Google Slides);
+  the free plan has daily limits, and if one is reached the database pauses until the next day. It never charges.
+- Optional extra protection: in the Google Cloud console, restrict your Firebase API key to your site's address
+  (APIs & Services → Credentials → the "Browser key" → Website restrictions: `https://YOUR-GITHUB-NAME.github.io/*`
+  and `https://YOUR-PROJECT.firebaseapp.com/*`).
+
+## For developers
 
 ```bash
 npm ci                  # .npmrc allows the editor's older React peer ranges
-node build.mjs web      # website → dist-web/ (what GitHub Pages publishes)
-node build.mjs          # Claude artifact → dist/
-node build.mjs webtest  # website with a fake Firebase → dist-webtest/ (local tests)
+node build.mjs web      # the website → dist-web/ (what GitHub Pages publishes on every push to main)
+node build.mjs webtest  # the website with a fake Firebase that enforces the same rules → dist-webtest/
+node build.mjs          # the Claude artifact version → dist/
 ```
 
-`build.mjs` uses esbuild (the editor's source uses lazy `require` for circular imports, which esbuild
-handles). It first bundles `src/export-entry.js` into `build/player.txt`, the player embedded in exported files.
+End-to-end tests (Playwright, against the fake Firebase) are in `test/e2e/`. How everything fits together
+(live editing, encryption, versions, themes, languages): **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**.
 
-## Files
-
-| File | Role |
-|---|---|
-| `src/main.jsx` | creates the editor store, English strings, fonts |
-| `src/App.jsx` | layout, top bar, dialogs |
-| `src/controller.js` | project state, slides, objects, saving, projects, presence |
-| `src/live.js`, `src/sync-core.js` | live collaboration engine and merge functions |
-| `src/collab-overlay.js` | collaborators' cursors, selections and live drags on the canvas |
-| `src/render.js`, `src/player.js` | renderer, morph interpolation, presenter |
-| `src/export.js` | standalone HTML export |
-| `src/storage.js` | versions (thinning, rename, delete, chunked), images, project list, clean-up |
-| `src/mathjax.js` | LaTeX → SVG, `\usepackage` handling |
-| `src/space.js` | encryption layer, invite codes, copying a project between places |
-| `src/web/platform.js`, `src/web/firebase-config.js` | website version: Firebase services, settings |
-| `src/builtin-templates.js` | built-in slide templates |
-| `src/google-fonts.json` | Google Fonts family list |
-| `src/ui/*` | slide list, animation panel, version history, templates, equation panel, font picker, sharing, object menu, projects window, offline side panels |
-| `src/theme.css` | Material 3 look |
+Built with [OpenPolotno](https://www.npmjs.com/package/@reyka/openpolotno) (MIT) for the editor,
+[MathJax](https://www.mathjax.org) (Apache 2.0) for equations, Firebase, Google Fonts, Openverse and Iconify.

@@ -5,19 +5,21 @@ This puts Morph on its own web address, free, with no credit card:
 - **Firebase (Spark plan, free)** stores the projects and runs live editing.
 - **GitHub Pages (free)** hosts the website. Every change pushed to the `main` branch is published automatically.
 
-Total time: about 15 minutes. Do the steps in order. Each step says what you should see when it worked.
+Total time: about 20 minutes. Do the steps in order. Each step says what you should see when it worked.
 
-## 0. Create the empty repository (Claude cannot create it)
+Replace **YOUR-GITHUB-NAME** below with your GitHub user name.
 
-1. Go to https://github.com/new (signed in as **ruelustin5**).
-2. Repository name: `morph`. Visibility: **Public** (GitHub Pages is free for public repositories; choose Private
-   only if this account has GitHub Pro). The code has no secrets: projects are stored in Firebase, encrypted when shared.
-3. Leave **Add a README**, **.gitignore** and **license** all off/None, so the repository is completely empty. Click **Create repository**.
-4. Tell Claude in the chat: **"The morph repository is created."** Claude then pushes the code into it.
-   Continue with steps 1 to 5 meanwhile; step 6 needs the code to be there.
+## 0. Make your copy of the code
 
-Repository: **https://github.com/ruelustin5/morph**
-Website address once published: **https://ruelustin5.github.io/morph/**
+1. Sign in to GitHub, open https://github.com/ruelustin5/morph and click **Fork** (top right) → **Create fork**.
+   Keep the repository name `morph` (the website address uses it). Forks of public repositories are public:
+   that's fine, the code has no secrets (projects are stored in Firebase, encrypted when shared).
+2. In your fork, open the **Actions** tab. GitHub turns workflows off in new forks: click
+   **I understand my workflows, go ahead and enable them**.
+
+✔ You are on `https://github.com/YOUR-GITHUB-NAME/morph`, and the Actions tab lists a workflow called **Deploy**.
+
+Your website will be at **https://YOUR-GITHUB-NAME.github.io/morph/**.
 
 > Never upgrade Firebase to the "Blaze" plan for this. Everything here works on the free Spark plan,
 > and on Spark nothing can ever be charged: if a daily limit is reached, the database pauses until the next day.
@@ -28,7 +30,7 @@ Website address once published: **https://ruelustin5.github.io/morph/**
 
 1. Go to https://console.firebase.google.com and sign in with the Google account that will own Morph.
 2. Click **Create a project** (or **Get started by setting up a Firebase project**).
-3. Project name: `morph-slides` (any name works). Continue.
+3. Project name: anything, for example `morph-slides`. Firebase may add a few characters to make it unique. Continue.
 4. If asked about **Gemini in Firebase** or **Google Analytics**, turn them **off**. Click **Create project**, wait, then **Continue**.
 
 ✔ You see the project's overview page. The plan shown (bottom-left or in the top bar) is **Spark**.
@@ -49,9 +51,9 @@ Website address once published: **https://ruelustin5.github.io/morph/**
 2. Tab **Sign-in method**:
    - Click **Anonymous** → turn on **Enable** → **Save**. (Visitors with a link use this; they never see it.)
    - Click **Add new provider** → **Google** → turn on **Enable** → choose the **support email** (your address) → **Save**.
-3. Tab **Settings** → **Authorized domains** → **Add domain** → type `ruelustin5.github.io` → **Add**.
+3. Tab **Settings** → **Authorized domains** → **Add domain** → type `YOUR-GITHUB-NAME.github.io` → **Add**.
 
-✔ The sign-in method list shows **Anonymous: Enabled** and **Google: Enabled**; authorized domains include `ruelustin5.github.io`.
+✔ The sign-in method list shows **Anonymous: Enabled** and **Google: Enabled**; authorized domains include `YOUR-GITHUB-NAME.github.io`.
 
 ## 4. Create the Firestore database (projects)
 
@@ -60,7 +62,7 @@ Website address once published: **https://ruelustin5.github.io/morph/**
 3. Location: choose one near you, for example `northamerica-northeast1 (Montréal)` or `nam5 (United States)`. It cannot be changed later; any choice works.
 4. Choose **Start in production mode**. Click **Create**.
 5. When the database is ready, open the **Rules** tab. Delete everything in the editor and paste the whole content of
-   [`firestore.rules`](https://github.com/ruelustin5/morph/blob/main/firestore.rules) from the repository. Click **Publish**.
+   [`firestore.rules`](https://github.com/YOUR-GITHUB-NAME/morph/blob/main/firestore.rules) from the repository. Click **Publish**.
 
 ✔ The Rules tab shows the new rules (they start with `rules_version = '2';` and mention `pub/space`), with a "published" time.
 
@@ -72,52 +74,60 @@ Website address once published: **https://ruelustin5.github.io/morph/**
 4. At the top of the **Data** tab there is an address like `https://morph-slides-default-rtdb.firebaseio.com/`.
    Copy it: this is the **databaseURL**.
 5. Open the **Rules** tab. Delete everything and paste the whole content of
-   [`database.rules.json`](https://github.com/ruelustin5/morph/blob/main/database.rules.json). Click **Publish**.
+   [`database.rules.json`](https://github.com/YOUR-GITHUB-NAME/morph/blob/main/database.rules.json). Click **Publish**.
 
 ✔ The Rules tab shows the rules with `"rooms"` and `"locks"`.
 
 ## 6. Put the settings into the website
 
-1. Open https://github.com/ruelustin5/morph/blob/main/src/web/firebase-config.js
+1. Open https://github.com/YOUR-GITHUB-NAME/morph/blob/main/src/web/firebase-config.js
 2. Click the **pencil** (Edit this file).
-3. Replace each `PASTE_…` value with the matching value you copied:
+3. The file has the settings of the original author's project. Replace **every** value with yours:
 
    ```js
    export default {
+     site: 'YOUR-GITHUB-NAME.github.io',                       // your website's address (no https://, no /morph)
      apiKey: 'AIza…',                                         // from step 2
-     authDomain: 'morph-slides.firebaseapp.com',               // from step 2
-     databaseURL: 'https://morph-slides-default-rtdb.firebaseio.com', // from step 5 (no slash at the end)
-     projectId: 'morph-slides',                                // from step 2
+     authDomain: 'your-project.firebaseapp.com',               // from step 2
+     databaseURL: 'https://your-project-default-rtdb.firebaseio.com', // from step 5 (no slash at the end)
+     projectId: 'your-project',                                // from step 2
      appId: '1:123…:web:abc…',                                 // from step 2
    };
    ```
-   Keep the quotes and commas. These values are not secret (they only name the project); the rules from steps 4–5 protect the data.
+   Keep the quotes and commas. These values are not secret (they only name the project); the rules from steps 4–5
+   protect the data. Until `site` matches your address, the website refuses to connect (it shows a yellow banner),
+   so a copy can never write into someone else's Firebase by mistake.
 4. Click **Commit changes…** → **Commit directly to the main branch** → **Commit changes**.
 
 ## 7. Turn on GitHub Pages
 
-1. Open https://github.com/ruelustin5/morph/settings/pages
+1. Open https://github.com/YOUR-GITHUB-NAME/morph/settings/pages
 2. Under **Build and deployment → Source**, choose **GitHub Actions**.
 3. If GitHub says Pages is not available for this repository (it was made Private without GitHub Pro):
    go to **Settings → General → Danger Zone → Change repository visibility → Public**, confirm, then come back to step 7.2.
    (The code has no secrets: projects are stored in Firebase, not in the repository.)
-4. Open https://github.com/ruelustin5/morph/actions. If no **Deploy** run is in progress, click **Deploy** (left) → **Run workflow** → **Run workflow**.
+4. Open https://github.com/YOUR-GITHUB-NAME/morph/actions. If no **Deploy** run is in progress, click **Deploy** (left) → **Run workflow** → **Run workflow**.
 5. Wait until the run has a green check (about 2 minutes).
 
-✔ https://ruelustin5.github.io/morph/ opens Morph and shows **"Welcome to Morph"**, with **"Make this my space: sign in with Google"**.
-If it still shows a yellow banner "Firebase isn't set up yet", step 6 was not saved: check the file and wait for a new Deploy run.
+✔ https://YOUR-GITHUB-NAME.github.io/morph/ opens Morph and shows **"To open a project, you need its secret link"**, with **"This is my space: sign in"**.
+If it shows a yellow banner instead, step 6 is not right (a `PASTE_…` value or a `site` that is not your address): fix the file and wait for a new Deploy run.
 
 ## 8. Claim the space (the owner must do this first)
 
-1. On https://ruelustin5.github.io/morph/, click **Make this my space: sign in with Google** and pick the owner's Google account.
+1. On https://YOUR-GITHUB-NAME.github.io/morph/, click **This is my space: sign in** and pick the owner's Google account.
 2. The page reloads into the editor. The button next to the logo says **Your space**.
 
-✔ Only this Google account can see the private projects. Anyone else who opens the address without a link sees "Open the link you were sent".
+✔ Only this Google account can see the private projects. Anyone else who opens the address without a link sees "To open a project, you need its secret link".
 
-## 9. Bring the projects over from the Claude version (optional)
+## 9. Bring projects over from another copy (optional)
 
-For each project in the Claude artifact: **⋯ (top bar) → Download project file**.
-Then on the website: **⋯ → Open project file…** and pick the file.
+In the other copy (or the Claude artifact version): **⋯ (top bar) → Download project file**.
+Then on your website: **⋯ → Open project file…** and pick the file.
+
+## Getting updates
+
+On your fork's page, **Sync fork → Update branch** brings the latest changes. Your `firebase-config.js` is kept
+unless the original file changed too; if GitHub reports a conflict there, keep your values.
 
 ---
 
@@ -131,14 +141,15 @@ send it. They open it and are straight in the project, with their name shown to 
 
 | What you see | Fix |
 |---|---|
-| Yellow banner "Firebase isn't set up yet" | `src/web/firebase-config.js` still has `PASTE_…` values (step 6), or the Deploy run hasn't finished. |
-| Google sign-in popup says `auth/unauthorized-domain` | Step 3.3: add `ruelustin5.github.io` to Authorized domains. |
-| Sign-in popup closes and nothing happens | The browser blocked the popup: allow popups for `ruelustin5.github.io` and click again. |
+| Yellow banner "Firebase isn't set up yet" or "This copy still has the original owner's Firebase settings" | `src/web/firebase-config.js` (step 6): a value was not replaced, or `site` is not your address. Or the Deploy run hasn't finished. |
+| The Actions tab has no Deploy run | Step 0.2: enable workflows in your fork, then Actions → Deploy → Run workflow. |
+| Google sign-in popup says `auth/unauthorized-domain` | Step 3.3: add `YOUR-GITHUB-NAME.github.io` to Authorized domains. |
+| Sign-in popup closes and nothing happens | The browser blocked the popup: allow popups for `YOUR-GITHUB-NAME.github.io` and click again. |
 | "Missing or insufficient permissions" | Rules not published (steps 4.5 and 5.5). |
 | Nobody else appears live / cursors missing | Realtime Database not created, wrong `databaseURL`, or its rules not published (step 5). |
-| Actions run failed | Open the run, read the red step, and send the error to Claude. |
+| Actions run failed | Open the run and read the red step. Most often: Pages source is not set to GitHub Actions (step 7.2). |
 
-## Future updates
+## When an update changes the rules
 
-Claude pushes changes to this repository; GitHub Pages republishes the site automatically after each push.
-If a change ever needs new Firebase rules, the update will say so, and you paste the new rules as in steps 4.5 / 5.5.
+If an update changes `firestore.rules` or `database.rules.json`, paste the new content into Firebase again
+(steps 4.5 and 5.5) right after syncing your fork. Otherwise the website may be refused by the old rules.

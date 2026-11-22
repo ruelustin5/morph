@@ -13,6 +13,7 @@ import { EN } from './i18n-en';
 import { EDITOR_FR } from './i18n-editor-fr';
 import { LANG } from './i18n';
 import { Controller } from './controller';
+import { themeLayouts } from './themes';
 import { App } from './App';
 
 setTranslations(EN);
@@ -31,6 +32,6 @@ store.setShowCustomSvg(false);
 store.setSize(1920, 1080);
 
 const controller = new Controller(store, null);
-if (typeof window !== 'undefined') { window.__morph = { store, controller, startTransition }; }
+if (typeof window !== 'undefined') { window.__morph = { store, controller, startTransition, themeLayouts }; }
 
 createRoot(document.getElementById('root')).render(<App c={controller} store={store} />);

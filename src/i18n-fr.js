@@ -28,6 +28,7 @@ export const FR = {
   'Nothing is deleted: the other saved copies stay available.': 'Rien n’est supprimé : les autres copies restent disponibles.',
   'Opening your presentation…': 'Ouverture de ta présentation…',
   'Firebase isn’t set up yet: projects are saved in this browser only (see SETUP.md).': 'Firebase n’est pas encore configuré : les projets sont gardés dans ce navigateur seulement (voir SETUP.md).',
+  'This copy still has the original owner’s Firebase settings, so it is not connected. Put yours in src/web/firebase-config.js (see SETUP.md). Until then, projects stay in this browser.': 'Cette copie a encore les réglages Firebase du propriétaire d’origine, donc elle n’est pas connectée. Mets les tiens dans src/web/firebase-config.js (voir SETUP.md). D’ici là, les projets restent dans ce navigateur.',
   'What’s your name?': 'Comment tu t’appelles ?', 'Shown to people working with you.': 'Visible par les personnes qui travaillent avec toi.', Continue: 'Continuer',
   'Save mine anyway': 'Enregistrer la mienne quand même', Cancel: 'Annuler',
   '{who} saved this project at {when}, after you opened it.': '{who} a enregistré ce projet à {when}, après que tu l’as ouvert.',

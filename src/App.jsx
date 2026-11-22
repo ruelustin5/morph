@@ -352,7 +352,9 @@ export const App = observer(function App({ c, store }) {
       {shareId && <ShareDialog c={c} projectId={shareId} onClose={() => setShareId(null)} />}
       {ready && !c.project && !c.isOwner && !c.busy && <JoinScreen c={c} />}
       {typeof window !== 'undefined' && window.__web && !window.__web.configured && (
-        <div className="setup-banner"><Icon icon="warning-sign" size={14} /> {t('Firebase isn’t set up yet: projects are saved in this browser only (see SETUP.md).')}</div>
+        <div className="setup-banner"><Icon icon="warning-sign" size={14} /> {window.__web.foreignCopy
+          ? t('This copy still has the original owner’s Firebase settings, so it is not connected. Put yours in src/web/firebase-config.js (see SETUP.md). Until then, projects stay in this browser.')
+          : t('Firebase isn’t set up yet: projects are saved in this browser only (see SETUP.md).')}</div>
       )}
       {historyOpen && <VersionHistory c={c} onClose={() => setHistoryOpen(false)} />}
       <SaveTemplateDialog c={c} />

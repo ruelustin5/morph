@@ -18,7 +18,11 @@ import {
 import config from './firebase-config';
 
 /* global __FAKE_FB__ */
-const configured = (typeof __FAKE_FB__ !== 'undefined' && __FAKE_FB__) || !String(config.apiKey || '').startsWith('PASTE');
+const host = typeof location !== 'undefined' ? location.hostname : '';
+const localHost = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost');
+// A copy published somewhere else still holding these settings must not use this Firebase project.
+const foreignCopy = !!config.site && !localHost && host !== config.site;
+const configured = (typeof __FAKE_FB__ !== 'undefined' && __FAKE_FB__) || (!String(config.apiKey || '').startsWith('PASTE') && !foreignCopy);
 const app = configured ? initializeApp(config) : null;
 const auth = app ? getAuth(app) : null;
 const fs = app ? initializeFirestore(app, { ignoreUndefinedProperties: true }) : null;
@@ -255,6 +259,7 @@ const downloads = {
 // ---- the owner ----------------------------------------------------------------------------------
 export const web = {
   configured,
+  foreignCopy,
   /** Sign in with Google. The first person to do this on a new site becomes its owner. */
   async signInOwner() {
     if (!auth) throw new Error('Firebase is not configured yet (src/web/firebase-config.js).');
