@@ -1,4 +1,4 @@
-// Photos (Openverse: openly licensed images) and Icons (Iconify), for the website version only.
+// Photos (Wikimedia Commons: freely licensed images) and Icons (Iconify), for the website version only.
 // Both are free public APIs that need no key. Inserted pictures are copied into the project
 // (resized to at most 1920 px) so presentations keep working offline and in exported files.
 import React, { useEffect, useRef, useState } from 'react';
@@ -55,31 +55,43 @@ function useSearch(fetcher, initial) {
   useEffect(() => { run(initial); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!q.trim()) return undefined;
-    const tm = setTimeout(() => run(q.trim()), 400);
+    const tm = setTimeout(() => run(q.trim()), 500);
     return () => clearTimeout(tm);
   }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
   return { q, setQ, items, state };
 }
 
 // ---- photos ---------------------------------------------------------------------------------
+const stripHtml = (h) => { const d = document.createElement('div'); d.innerHTML = String(h || ''); return (d.textContent || '').trim(); };
+
 async function searchPhotos(q) {
-  const r = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&page_size=40&mature=false`);
+  const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search'
+    + `&gsrsearch=${encodeURIComponent(q + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=40`
+    + '&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiextmetadatafilter=Artist|LicenseShortName|ObjectName&iiurlwidth=500';
+  const r = await fetch(u);
   if (!r.ok) throw new Error('search failed');
   const d = await r.json();
-  return (d.results || []).map((x) => ({
-    id: x.id, title: x.title || '', creator: x.creator || '', license: `${String(x.license || '').toUpperCase()} ${x.license_version || ''}`.trim(),
-    page: x.foreign_landing_url || '', url: x.url, thumb: `https://api.openverse.org/v1/images/${x.id}/thumb/`, w: x.width || 0, h: x.height || 0,
-  }));
+  const pages = Object.values((d.query && d.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+  return pages.filter((x) => x.imageinfo && x.imageinfo[0] && /^image\/(jpeg|png|webp|gif)$/.test(x.imageinfo[0].mime)).map((x) => {
+    const ii = x.imageinfo[0];
+    const m = ii.extmetadata || {};
+    const big = ii.width > 1920 && ii.thumburl ? ii.thumburl.replace(/\/\d+px-/, '/1920px-') : ii.url;
+    return {
+      id: String(x.pageid), title: stripHtml((m.ObjectName && m.ObjectName.value) || x.title.replace(/^File:/, '').replace(/\.\w+$/, '')),
+      creator: stripHtml(m.Artist && m.Artist.value), license: stripHtml(m.LicenseShortName && m.LicenseShortName.value),
+      page: ii.descriptionurl || '', full: big, thumb: ii.thumburl || ii.url, w: ii.width, h: ii.height,
+    };
+  });
 }
 
 const PhotosPanel = observer(function PhotosPanel({ store }) {
-  const s = useSearch(searchPhotos, 'nature');
+  const s = useSearch(searchPhotos, 'landscape');
   const [busy, setBusy] = useState(null);
   const add = async (it, pos) => {
     if (busy) return;
     setBusy(it.id);
     try {
-      const pic = await fetchPicture([`https://api.openverse.org/v1/images/${it.id}/thumb/?full_size=true`, it.url, it.thumb]);
+      const pic = await fetchPicture([it.full, it.thumb]);
       const page = store.activePage;
       if (!page) return;
       const k = Math.min(1, (store.width * 0.6) / pic.w, (store.height * 0.6) / pic.h);
@@ -100,7 +112,7 @@ const PhotosPanel = observer(function PhotosPanel({ store }) {
   return (
     <div className="online-panel">
       <InputGroup leftIcon="search" placeholder={t('Search free photos')} value={s.q} onChange={(e) => s.setQ(e.target.value)} />
-      <p className="online-note">{t('Openly licensed photos from Openverse. The credit is added to the slide notes.')}</p>
+      <p className="online-note">{t('Freely licensed photos from Wikimedia Commons. The credit is added to the slide notes.')}</p>
       {s.state === 'loading' && <div className="online-wait"><Spinner size={20} /></div>}
       {s.state === 'error' && <p className="online-note">{t('Photos could not be loaded. Check your connection.')}</p>}
       {s.state === 'done' && !s.items.length && <p className="online-note">{t('No photos found.')}</p>}

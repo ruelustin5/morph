@@ -70,8 +70,8 @@ browser, and removes it from the address bar. Removing a person gives the projec
 
 ## Online features (website only)
 
-The website adds **Photos** ([Openverse](https://openverse.org), openly licensed; the credit goes into the slide's
-notes) and **Icons** ([Iconify](https://iconify.design)), `src/ui/OnlinePanels.jsx`. Pictures are copied into the
+The website adds **Photos** ([Wikimedia Commons](https://commons.wikimedia.org), freely licensed; the credit goes
+into the slide's notes) and **Icons** ([Iconify](https://iconify.design)), `src/ui/OnlinePanels.jsx`. Pictures are copied into the
 project (at most 1920 px), so presentations keep working offline. The Claude artifact cannot reach the internet.
 
 ## Removed because an artifact cannot reach the internet

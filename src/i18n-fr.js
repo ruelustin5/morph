@@ -214,7 +214,7 @@ export const FR = {
 
   // ---- photos and icons -----------------------------------------------------------------------
   Photos: 'Photos', Icons: 'Icônes', 'Search free photos': 'Chercher des photos libres', 'Search icons': 'Chercher des icônes',
-  'Openly licensed photos from Openverse. The credit is added to the slide notes.': 'Photos sous licence libre d’Openverse. Le crédit est ajouté aux notes de la diapo.',
+  'Freely licensed photos from Wikimedia Commons. The credit is added to the slide notes.': 'Photos sous licence libre de Wikimedia Commons. Le crédit est ajouté aux notes de la diapo.',
   'Photos could not be loaded. Check your connection.': 'Les photos n’ont pas pu être chargées. Vérifie ta connexion.', 'No photos found.': 'Aucune photo trouvée.',
   'Photo: “{title}” by {creator}, {license}. {page}': 'Photo : « {title} » par {creator}, {license}. {page}', untitled: 'sans titre', unknown: 'inconnu',
   'Photo added. Its credit is in the slide notes.': 'Photo ajoutée. Son crédit est dans les notes de la diapo.', 'The picture could not be downloaded.': 'L’image n’a pas pu être téléchargée.',

@@ -23,7 +23,7 @@ browser, free, and you can edit together with other people at the same time.
   Slides can be **assigned to someone**, and everyone can show **only their own slides**.
 - **Equations** in LaTeX, with a package manager (physics, mhchem, siunitx, braket, cancel…): turn packages on
   once for the presentation instead of writing `\usepackage`.
-- **Every Google Font** (1,800+), free **photos** (Openverse, with the credit added to your notes) and **icons** (Iconify).
+- **Every Google Font** (1,800+), free **photos** (Wikimedia Commons, with the credit added to your notes) and **icons** (Iconify).
 - **Present** with the keyboard or a classroom clicker (Page Up/Down, B for a black screen, L for a laser dot), and
   **export** one standalone `.html` file that plays anywhere, even offline.
 - **Version history** like Google Slides: saved continuously, name a version, go back, make a copy.
@@ -114,4 +114,4 @@ End-to-end tests (Playwright, against the fake Firebase) are in `test/e2e/`. How
 (live editing, encryption, versions, themes, languages): **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**.
 
 Built with [OpenPolotno](https://www.npmjs.com/package/@reyka/openpolotno) (MIT) for the editor,
-[MathJax](https://www.mathjax.org) (Apache 2.0) for equations, Firebase, Google Fonts, Openverse and Iconify.
+[MathJax](https://www.mathjax.org) (Apache 2.0) for equations, Firebase, Google Fonts, Wikimedia Commons and Iconify.
