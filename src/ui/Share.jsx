@@ -149,7 +149,6 @@ export function JoinForm({ c, onDone, autoFocus = true, large = false }) {
 /** Full screen for a guest who has not joined anything yet. */
 export function JoinScreen({ c }) {
   useController(c);
-  const [showCode, setShowCode] = useState(TARGET !== 'web');
   const [signing, setSigning] = useState(false);
   const web = typeof window !== 'undefined' ? window.__web : null;
   const ownerSignIn = async () => {
@@ -166,18 +165,15 @@ export function JoinScreen({ c }) {
   return (
     <div className="join-screen">
       <div className="join-card">
-        <div className="join-mark"><Icon icon={TARGET === 'web' ? 'link' : 'key'} size={22} /></div>
-        <h1>{c.spaceName()}</h1>
+        <div className="join-mark"><Icon icon={web ? 'link' : 'key'} size={22} /></div>
+        <h1>{web ? 'Morph' : c.spaceName()}</h1>
         {c.joinError && <div className="field-error join-err">{c.joinError}</div>}
-        {TARGET === 'web'
-          ? <p className="muted">Open the link you were sent to see the project.</p>
-          : <p className="muted">Enter the code you were given.</p>}
-        {showCode ? <JoinForm c={c} large autoFocus={TARGET !== 'web'} />
-          : <Button minimal small icon="key" text="I have a code" onClick={() => setShowCode(true)} />}
+        {web
+          ? <p className="muted">To open a project, you need its secret link. Ask the person who shared it with you.</p>
+          : <><p className="muted">Enter the code you were given.</p><JoinForm c={c} large /></>}
         {web && (
           <div className="join-owner">
-            <Button minimal small icon="log-in" loading={signing} onClick={ownerSignIn}
-              text={c.spaceOwnerId ? 'This is my space: sign in' : 'Make this my space: sign in with Google'} />
+            <Button minimal small icon="log-in" loading={signing} onClick={ownerSignIn} text="This is my space: sign in" />
           </div>
         )}
       </div>

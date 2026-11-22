@@ -183,7 +183,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           {c.isOwner && <MenuItem icon="folder-open" text="Open project file…" onClick={() => fileRef.current && fileRef.current.click()} />}
           {typeof window !== 'undefined' && window.__web && window.__web.configured && (c.isOwner
             ? <MenuItem icon="log-out" text="Sign out" onClick={async () => { await window.__web.signOut(); window.location.reload(); }} />
-            : <MenuItem icon="log-in" text="Owner? Sign in" onClick={async () => {
+            : <MenuItem icon="log-in" text="This is my space: sign in" onClick={async () => {
                 try { const r = await window.__web.signInOwner(); if (r.owner) window.location.reload(); else c.toast('This space belongs to someone else.', 'warning'); }
                 catch (e) { c.toast('Sign-in did not finish: ' + ((e && e.message) || e), 'warning'); }
               }} />)}

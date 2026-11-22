@@ -92,6 +92,8 @@ export function ProjectsDialog({ c, isOpen, onClose, onShare }) {
               <span className="muted proj-count"><Icon icon="lock" size={12} /> {list.length} project{list.length === 1 ? '' : 's'}, private unless you share them</span>
               <Button intent="primary" icon="plus" text="New project" onClick={() => request({ kind: 'new' })} />
             </>
+          ) : (typeof window !== 'undefined' && window.__web) ? (
+            <span className="muted proj-count"><Icon icon="link" size={12} /> Open a secret link to add a project here</span>
           ) : (
             <JoinForm c={c} autoFocus={false} onDone={onClose} />
           )}
