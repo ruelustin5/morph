@@ -131,41 +131,75 @@ const PhotosPanel = observer(function PhotosPanel({ store }) {
 });
 
 // ---- icons ----------------------------------------------------------------------------------
+// One request per icon set (not one per icon): the public Iconify API refuses too many requests at
+// once, which left most previews broken. Icons are drawn from their data as <img> data URLs, so
+// nothing from the API ever runs as page code.
+const ICON_CACHE = new Map(); // "prefix:name" → svg markup (currentColor already replaced)
+const ICON_COLOR = '#202124';
+
+function iconSvg(set, name) {
+  let icon = set.icons && set.icons[name];
+  let hFlip = false, vFlip = false, rotate = 0;
+  if (!icon && set.aliases && set.aliases[name]) {
+    const al = set.aliases[name];
+    icon = set.icons[al.parent];
+    hFlip = !!al.hFlip; vFlip = !!al.vFlip; rotate = al.rotate || 0;
+  }
+  if (!icon || !icon.body) return null;
+  const w = icon.width || set.width || 16, h = icon.height || set.height || 16;
+  const tr = [];
+  if (hFlip || icon.hFlip) tr.push(`translate(${w} 0) scale(-1 1)`);
+  if (vFlip || icon.vFlip) tr.push(`translate(0 ${h}) scale(1 -1)`);
+  if (rotate || icon.rotate) tr.push(`rotate(${90 * ((rotate || 0) + (icon.rotate || 0))} ${w / 2} ${h / 2})`);
+  const body = tr.length ? `<g transform="${tr.join(' ')}">${icon.body}</g>` : icon.body;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.left || 0} ${icon.top || 0} ${w} ${h}" width="${w}" height="${h}">${body.replace(/currentColor/g, ICON_COLOR)}</svg>`;
+}
+
 async function searchIcons(q) {
-  const r = await fetch(`https://api.iconify.design/search?query=${encodeURIComponent(q)}&limit=96`);
+  const r = await fetch(`https://api.iconify.design/search?query=${encodeURIComponent(q)}&limit=64`);
   if (!r.ok) throw new Error('search failed');
   const d = await r.json();
-  return (d.icons || []).map((n) => { const [prefix, name] = n.split(':'); return { id: n, prefix, name }; });
+  const list = (d.icons || []).slice(0, 64).map((n) => { const [prefix, name] = n.split(':'); return { id: n, prefix, name }; });
+  // Fetch what is missing, grouped by icon set, a few sets at a time.
+  const need = new Map();
+  for (const it of list) if (!ICON_CACHE.has(it.id)) { if (!need.has(it.prefix)) need.set(it.prefix, []); need.get(it.prefix).push(it.name); }
+  const sets = [...need.entries()];
+  for (let k = 0; k < sets.length; k += 4) {
+    await Promise.all(sets.slice(k, k + 4).map(async ([prefix, names]) => {
+      try {
+        const res = await fetch(`https://api.iconify.design/${prefix}.json?icons=${names.map(encodeURIComponent).join(',')}`);
+        if (!res.ok) return;
+        const set = await res.json();
+        for (const nm of names) { const svg = iconSvg(set, nm); if (svg) ICON_CACHE.set(`${prefix}:${nm}`, svg); }
+      } catch (e) { /* that set is skipped */ }
+    }));
+  }
+  const ok = list.filter((it) => ICON_CACHE.has(it.id));
+  if (list.length && !ok.length) throw new Error('icons failed');
+  return ok.map((it) => ({ ...it, url: svgToURL(ICON_CACHE.get(it.id)) }));
 }
 
 const IconsPanel = observer(function IconsPanel({ store }) {
   const s = useSearch(searchIcons, 'star');
-  const add = async (it, pos) => {
-    try {
-      const r = await fetch(`https://api.iconify.design/${it.prefix}/${it.name}.svg?color=%23202124&height=256`);
-      if (!r.ok) throw new Error();
-      const svg = await r.text();
-      const page = store.activePage;
-      if (!page) return;
-      const size = Math.min(store.width, store.height) * 0.2;
-      const x = pos ? pos.x - size / 2 : (store.width - size) / 2, y = pos ? pos.y - size / 2 : (store.height - size) / 2;
-      page.addElement({ type: 'svg', src: svgToURL(svg), width: size, height: size, x, y, keepRatio: true });
-    } catch (e) {
-      if (C) C.toast(t('The icon could not be downloaded.'), 'warning');
-    }
+  const add = (it, pos) => {
+    const page = store.activePage;
+    if (!page) return;
+    const size = Math.min(store.width, store.height) * 0.2;
+    const x = pos ? pos.x - size / 2 : (store.width - size) / 2, y = pos ? pos.y - size / 2 : (store.height - size) / 2;
+    page.addElement({ type: 'svg', src: it.url, width: size, height: size, x, y, keepRatio: true });
   };
   return (
     <div className="online-panel">
       <InputGroup leftIcon="search" placeholder={t('Search icons')} value={s.q} onChange={(e) => s.setQ(e.target.value)} />
       <p className="online-note">{t('Free icons from Iconify. Change their color in the toolbar.')}</p>
       {s.state === 'loading' && <div className="online-wait"><Spinner size={20} /></div>}
-      {s.state === 'error' && <p className="online-note">{t('Icons could not be loaded. Check your connection.')}</p>}
+      {s.state === 'error' && <p className="online-note">{t('Icons could not be loaded. Check your connection, or try again in a minute.')}</p>}
       {s.state === 'done' && !s.items.length && <p className="online-note">{t('No icons found.')}</p>}
       <div className="icon-grid">
         {s.items.map((it) => (
           <button key={it.id} type="button" className="icon-tile" title={it.id} draggable onClick={() => add(it)}
             onDragStart={() => registerNextDomDrop((pos) => add(it, pos))} onDragEnd={() => registerNextDomDrop(null)}>
-            <img src={`https://api.iconify.design/${it.prefix}/${it.name}.svg?height=32`} alt={it.name} loading="lazy" />
+            <img src={it.url} alt={it.name} />
           </button>
         ))}
       </div>

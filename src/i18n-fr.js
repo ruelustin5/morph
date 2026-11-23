@@ -199,6 +199,18 @@ export const FR = {
   'Two objects with different IDs do not morph. To make them the same object, click “Same object as…” and pick the other one (or type its ID in the ID box). A word can even morph into a picture. “Separate here” does the opposite.': 'Deux objets avec des ID différents ne se transforment pas. Pour en faire le même objet, clique sur « Même objet que… » et choisis l’autre (ou tape son ID dans la case ID). Un mot peut même se transformer en image. « Séparer ici » fait le contraire.',
   'With an object selected, the Animation panel says what happens to it, slide by slide. Arrives: Morph or Jump if it was on the slide before, Fade in or Just appear if it is new. Leaves: the same toward the next slide. Then how long it takes, and how it moves (try Bounce). The Play buttons above preview it.': 'Quand un objet est sélectionné, le panneau Animation dit ce qui lui arrive, diapo par diapo. Arrivée : Transformer ou Sauter s’il était sur la diapo d’avant, Fondu entrant ou Apparaître net s’il est nouveau. Départ : pareil vers la diapo suivante. Puis la durée et la façon de bouger (essaie Rebond). Les boutons Jouer au-dessus en montrent un aperçu.',
 
+  // ---- strict tutorial ---------------------------------------------------------------------------
+  'The practice slides had been changed, so they were put back the way this step needs them.': 'Les diapos d’exercice avaient été modifiées : elles ont été remises comme cette étape en a besoin.',
+  'You can take the tutorial any time: ⋯ menu (top right) › Tutorial.': 'Tu peux faire le tutoriel quand tu veux : menu ⋯ (en haut à droite) › Tutoriel.',
+  'Leave the tutorial?': 'Quitter le tutoriel ?', 'You can take it again any time from the ⋯ menu (top right). The practice presentation is not kept.': 'Tu peux le refaire quand tu veux depuis le menu ⋯ (en haut à droite). La présentation d’exercice n’est pas gardée.',
+  'Keep going': 'Continuer', 'Leave the tutorial': 'Quitter le tutoriel', 'Done! You can go on.': 'Fait ! Tu peux continuer.', 'Put it back': 'Remettre',
+  'Your turn. Next opens when it is done.': 'À toi. Suivant s’active quand c’est fait.',
+  'Slide 1 or slide 2 was changed. Put them back to continue.': 'La diapo 1 ou 2 a été modifiée. Remets-les pour continuer.',
+  'Slide 3 is not a copy of slide 2.': 'La diapo 3 n’est pas une copie de la diapo 2.',
+  'That was slide 2. Change SUN on slide 3 (the copy).': 'Ça, c’était la diapo 2. Change SUN sur la diapo 3 (la copie).',
+  'Slide 1 was changed. Put it back to continue.': 'La diapo 1 a été modifiée. Remets-la pour continuer.', 'Slide 3 is gone.': 'La diapo 3 n’existe plus.',
+  'SUN is not on slide 3 anymore.': 'SUN n’est plus sur la diapo 3.', 'Slide 3 is not a copy of slide 2 anymore.': 'La diapo 3 n’est plus une copie de la diapo 2.',
+
   // ---- tutorial ---------------------------------------------------------------------------------
   Tutorial: 'Tutoriel', Practice: 'Exercice', Leave: 'Quitter', 'New to Morph?': 'Nouveau dans Morph ?', 'Not now': 'Pas maintenant', 'Start the tutorial': 'Commencer le tutoriel',
   'A short hands-on tutorial: you will see how objects move from one slide to the next, and make one move yourself. It uses a practice presentation; your own work is not touched.': 'Un court tutoriel pratique : tu verras comment les objets bougent d’une diapo à l’autre, et tu en feras bouger un toi-même. Il utilise une présentation d’exercice ; ton travail n’est pas touché.',
@@ -282,7 +294,7 @@ export const FR = {
   'Photo: “{title}” by {creator}, {license}. {page}': 'Photo : « {title} » par {creator}, {license}. {page}', untitled: 'sans titre', unknown: 'inconnu',
   'Photo added. Its credit is in the slide notes.': 'Photo ajoutée. Son crédit est dans les notes de la diapo.', 'The picture could not be downloaded.': 'L’image n’a pas pu être téléchargée.',
   'Free icons from Iconify. Change their color in the toolbar.': 'Icônes gratuites d’Iconify. Change leur couleur dans la barre d’outils.',
-  'Icons could not be loaded. Check your connection.': 'Les icônes n’ont pas pu être chargées. Vérifie ta connexion.', 'No icons found.': 'Aucune icône trouvée.', 'The icon could not be downloaded.': 'L’icône n’a pas pu être téléchargée.',
+  'Icons could not be loaded. Check your connection, or try again in a minute.': 'Les icônes n’ont pas pu être chargées. Vérifie ta connexion, ou réessaie dans une minute.', 'No icons found.': 'Aucune icône trouvée.', 'The icon could not be downloaded.': 'L’icône n’a pas pu être téléchargée.',
 
   // ---- version history ------------------------------------------------------------------------
   'Current version': 'Version actuelle', 'Saved automatically': 'Enregistrée automatiquement', 'Name this version': 'Nommer cette version', 'Name current version': 'Nommer la version actuelle',

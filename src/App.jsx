@@ -143,7 +143,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
       {p && c.tutorial && (
         <span className="practice-tag">
           <Icon icon="learning" size={12} /> {t('Practice')}
-          <Button small minimal icon="log-out" text={t('Leave')} onClick={() => { c.setUi({ tour: null }); c.endTutorial(); }} />
+          <Button small minimal icon="log-out" text={t('Leave')} onClick={() => { if (c.ui.tour != null) c.setUi({ tourLeave: Date.now() }); else c.endTutorial(); }} />
         </span>
       )}
       {p && c.isOwner && c.canShare && !c.tutorial && (
@@ -204,7 +204,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
               }} />)}
         </Menu>
       }>
-        <Button minimal icon="more" aria-label={t('More')} disabled={!p} />
+        <Button minimal icon="more" aria-label={t('More')} data-tour="more" disabled={!p} />
       </Popover>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={async (e) => {
         const f = e.target.files && e.target.files[0];

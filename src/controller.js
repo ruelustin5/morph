@@ -1417,6 +1417,16 @@ export class Controller {
     this.emitNow();
   }
 
+  /** The tutorial puts the practice slides back the way a step needs them. */
+  setTutorialSlides(slides, active = 0) {
+    if (!this.tutorial) return;
+    const p = tutorialProject();
+    p.slides = JSON.parse(JSON.stringify(slides));
+    if (this.project && this.project.notes) p.notes = { ...this.project.notes };
+    this.setProject(p, active);
+    this.dirty = false;
+  }
+
   /** Leave the practice presentation and reopen the one that was open before. */
   async endTutorial() {
     if (!this.tutorial) return;

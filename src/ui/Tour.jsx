@@ -7,7 +7,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@blueprintjs/core';
 import { useController } from './hooks';
 import { createPlayer } from '../player';
-import { TUTORIAL_STEPS } from '../tutorial';
+import { TUTORIAL_STEPS, ensureState } from '../tutorial';
 import { t } from '../i18n';
 
 export const TOUR_VERSION = 2;
@@ -73,14 +73,49 @@ export function Tour({ c }) {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const cardRef = useRef(null);
   const [card, setCard] = useState({ w: 360, h: 180 });
+  const [confirm, setConfirm] = useState(false);   // "Leave the tutorial?"
+  const [notice, setNotice] = useState(null);      // the practice slides were put back
+  const [hidden, setHidden] = useState(false);     // hidden while presenting
+
+  // Pointing at the ⋯ menu, where the tutorial can be started again.
+  const pointAtMenu = () => {
+    c.toast(t('You can take the tutorial any time: ⋯ menu (top right) › Tutorial.'), 'none', { timeout: 7000 });
+    const b = document.querySelector('[data-tour="more"]');
+    if (b) { b.classList.add('tour-pulse'); setTimeout(() => b.classList.remove('tour-pulse'), 4500); }
+  };
+
+  const close = () => { markSeen(); setConfirm(false); c.setUi({ tour: null, tourLeave: null }); };
 
   // Leaving the practice presentation another way (opening a project) ends the tutorial.
   useEffect(() => { if (typeof mode === 'number' && !c.tutorial) c.setUi({ tour: null }); }, [mode, !!c.tutorial]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Entering a step: put the screen in the right state.
+  // Entering a step: check the practice slides are as the step needs (put them back if not), then
+  // put the screen in the right state.
   useEffect(() => {
-    if (step && step.setup) { try { step.setup(c); } catch (e) { /* the step still shows */ } }
+    setConfirm(false);
+    if (!step) return undefined;
+    let fixed = false;
+    try { fixed = ensureState(c, step.need); } catch (e) { /* the step still shows */ }
+    setNotice(fixed ? t('The practice slides had been changed, so they were put back the way this step needs them.') : null);
+    const tm = setTimeout(() => { if (step.setup) { try { step.setup(c); } catch (e) { /* ignore */ } } }, fixed ? 150 : 0);
+    return () => clearTimeout(tm);
   }, [step && step.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The top bar's "Leave" asks here while the tutorial runs.
+  useEffect(() => { if (c.ui.tourLeave && open) setConfirm(true); }, [c.ui.tourLeave]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // While a step explains something, the page underneath cannot be used: clicks are caught by the shade,
+  // and keys outside the card are stopped (Escape asks to leave, arrows move between steps).
+  useEffect(() => {
+    if (!open || (step && step.interactive && !confirm)) return undefined;
+    const onKey = (e) => {
+      if (cardRef.current && cardRef.current.contains(e.target)) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Escape') { if (mode === 'ask') close(); else setConfirm(true); }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Follow the target while it moves (panels opening, window resizing).
   useEffect(() => {
@@ -89,12 +124,14 @@ export function Tour({ c }) {
     const tick = () => {
       const r = step && step.target ? visibleRect(step.target) : null;
       setRect((prev) => (JSON.stringify(prev) === JSON.stringify(r) ? prev : r));
+      const pres = !!document.querySelector('.presenter-wrap');
+      setHidden((prev) => (prev === pres ? prev : pres));
       setSize((prev) => (prev.w === window.innerWidth && prev.h === window.innerHeight ? prev : { w: window.innerWidth, h: window.innerHeight }));
       raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [open, step && step.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, mode, step && step.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     if (cardRef.current) { const r = cardRef.current.getBoundingClientRect(); if (Math.abs(r.height - card.h) > 1 || Math.abs(r.width - card.w) > 1) setCard({ w: r.width, h: r.height }); }
@@ -105,28 +142,29 @@ export function Tour({ c }) {
     if (!open) return;
     const b = cardRef.current && cardRef.current.querySelector('[data-primary]');
     if (b && !(step && step.interactive)) b.focus({ preventScroll: true });
-  }, [open, k, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, k, mode, confirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!open) return null;
+  if (!open || hidden) return null;
 
-  const close = () => { markSeen(); c.setUi({ tour: null }); };
   const start = async () => {
     markSeen();
-    await c.startTutorial();
+    if (!c.tutorial) await c.startTutorial();
     // Wait for the practice presentation to be on screen before deciding which steps can show.
     setTimeout(() => { setSteps(tutorialSteps(c)); c.setUi({ tour: 0 }); }, 500);
   };
+  const done = step && step.check ? !!step.check(c) : true;
   const go = (d) => {
+    if (d > 0 && !done) return; // a hands-on step has to be done first (or "Show me")
     const n = k + d;
     if (n < 0) return;
     if (n >= steps.length) { close(); return; }
     c.setUi({ tour: n });
   };
-  const leave = async () => { close(); await c.endTutorial(); };
+  const leave = async () => { close(); await c.endTutorial(); pointAtMenu(); };
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
-    else if (e.key === 'ArrowRight' && mode !== 'ask') { e.preventDefault(); e.stopPropagation(); go(1); }
-    else if (e.key === 'ArrowLeft' && mode !== 'ask') { e.preventDefault(); e.stopPropagation(); go(-1); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (mode === 'ask') { close(); pointAtMenu(); } else setConfirm(!confirm); }
+    else if (e.key === 'ArrowRight' && mode !== 'ask' && !confirm) { e.preventDefault(); e.stopPropagation(); go(1); }
+    else if (e.key === 'ArrowLeft' && mode !== 'ask' && !confirm) { e.preventDefault(); e.stopPropagation(); go(-1); }
     else e.stopPropagation();
   };
 
@@ -140,7 +178,7 @@ export function Tour({ c }) {
           <h3>{t('New to Morph?')}</h3>
           <p>{t('A short hands-on tutorial: you will see how objects move from one slide to the next, and make one move yourself. It uses a practice presentation; your own work is not touched.')}</p>
           <div className="tour-actions">
-            <Button minimal small text={t('Not now')} onClick={close} />
+            <Button minimal small text={t('Not now')} onClick={() => { close(); pointAtMenu(); }} />
             <span className="phase-spacer" />
             <Button intent="primary" icon="play" text={t('Start the tutorial')} onClick={start} data-primary />
           </div>
@@ -167,11 +205,11 @@ export function Tour({ c }) {
   x = Math.max(M, Math.min(size.w - card.w - M, x));
   y = Math.max(M, Math.min(size.h - card.h - M, y));
   const hole = rect && { x: rect.x - PAD, y: rect.y - PAD, w: rect.w + 2 * PAD, h: rect.h + 2 * PAD };
-  const done = step.check ? !!step.check(c) : false;
   const last = k === steps.length - 1;
+  const problem = step.problem && !done ? step.problem(c) : null;
 
   return (
-    <div className={'tour' + (step.interactive ? ' is-interactive' : '')} role="dialog" aria-modal={!step.interactive} aria-label={t('Tutorial')}>
+    <div className={'tour' + (step.interactive && !confirm ? ' is-interactive' : '')} role="dialog" aria-modal={!step.interactive || confirm} aria-label={t('Tutorial')}>
       <svg className="tour-shade" width={size.w} height={size.h} aria-hidden="true">
         <defs>
           <mask id="tour-mask">
@@ -183,30 +221,47 @@ export function Tour({ c }) {
         {hole && <rect className="tour-ring" x={hole.x} y={hole.y} width={hole.w} height={hole.h} rx="14" />}
       </svg>
       <div className={'tour-card is-' + side + (step.demo ? ' has-demo' : '')} ref={cardRef} style={{ left: x, top: y }} data-step={step.id} data-side={side} onKeyDown={onKey}>
-        <div className="tour-count">{t('{a} of {b}', { a: k + 1, b: steps.length })}</div>
-        <h3>{t(step.title)}</h3>
-        <p>{t(step.body)}</p>
-        {step.demo && <Demo c={c} from={step.demo[0]} to={step.demo[1]} />}
-        {step.check && (
-          <div className={'tour-task' + (done ? ' is-done' : '')}>
-            {done
-              ? <><Icon icon="tick-circle" size={14} /> {t('Done!')}</>
-              : <><Icon icon="hand-up" size={14} /> {t('Your turn.')} <Button small minimal intent="primary" text={t('Show me')} onClick={() => step.doIt(c)} /></>}
-          </div>
+        {confirm ? (
+          <>
+            <h3>{t('Leave the tutorial?')}</h3>
+            <p>{t('You can take it again any time from the ⋯ menu (top right). The practice presentation is not kept.')}</p>
+            <div className="tour-actions">
+              <span className="phase-spacer" />
+              <Button small text={t('Keep going')} onClick={() => { setConfirm(false); c.setUi({ tourLeave: null }); }} data-primary />
+              <Button small intent="danger" text={t('Leave the tutorial')} onClick={leave} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="tour-count">{t('{a} of {b}', { a: k + 1, b: steps.length })}</div>
+            <h3>{t(step.title)}</h3>
+            <p>{t(step.body)}</p>
+            {notice && <p className="tour-notice"><Icon icon="history" size={12} /> {notice}</p>}
+            {step.demo && <Demo c={c} from={step.demo[0]} to={step.demo[1]} />}
+            {step.check && (
+              <div className={'tour-task' + (done ? ' is-done' : problem ? ' is-wrong' : '')}>
+                {done
+                  ? <><Icon icon="tick-circle" size={14} /> <span>{t('Done! You can go on.')}</span></>
+                  : problem
+                    ? <><Icon icon="warning-sign" size={14} /> <span>{t(problem)}</span> <Button small minimal intent="primary" text={t('Put it back')} onClick={() => step.fix(c)} /></>
+                    : <><Icon icon="hand-up" size={14} /> <span>{t('Your turn. Next opens when it is done.')}</span> <Button small minimal intent="primary" text={t('Show me')} onClick={() => step.doIt(c)} /></>}
+              </div>
+            )}
+            <div className="tour-actions">
+              {!last && <Button minimal small text={t('Stop')} onClick={() => setConfirm(true)} />}
+              <span className="phase-spacer" />
+              {k > 0 && <Button small text={t('Back')} onClick={() => go(-1)} />}
+              {last ? (
+                <>
+                  <Button small text={t('Keep practicing')} onClick={close} />
+                  <Button small intent="primary" text={t('Back to my presentation')} onClick={async () => { close(); await c.endTutorial(); }} data-primary />
+                </>
+              ) : (
+                <Button small intent="primary" text={t('Next')} onClick={() => go(1)} disabled={!done} data-primary />
+              )}
+            </div>
+          </>
         )}
-        <div className="tour-actions">
-          {!last && <Button minimal small text={t('Stop')} onClick={leave} />}
-          <span className="phase-spacer" />
-          {k > 0 && <Button small text={t('Back')} onClick={() => go(-1)} />}
-          {last ? (
-            <>
-              <Button small text={t('Keep practicing')} onClick={close} />
-              <Button small intent="primary" text={t('Back to my presentation')} onClick={leave} data-primary />
-            </>
-          ) : (
-            <Button small intent="primary" text={t('Next')} onClick={() => go(1)} data-primary />
-          )}
-        </div>
       </div>
     </div>
   );
