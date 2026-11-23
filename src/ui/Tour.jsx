@@ -207,6 +207,7 @@ export function Tour({ c }) {
   const hole = rect && { x: rect.x - PAD, y: rect.y - PAD, w: rect.w + 2 * PAD, h: rect.h + 2 * PAD };
   const last = k === steps.length - 1;
   const problem = step.problem && !done ? step.problem(c) : null;
+  const hint = step.hint && !done && !problem ? step.hint(c) : null;
 
   return (
     <div className={'tour' + (step.interactive && !confirm ? ' is-interactive' : '')} role="dialog" aria-modal={!step.interactive || confirm} aria-label={t('Tutorial')}>
@@ -244,7 +245,7 @@ export function Tour({ c }) {
                   ? <><Icon icon="tick-circle" size={14} /> <span>{t('Done! You can go on.')}</span></>
                   : problem
                     ? <><Icon icon="warning-sign" size={14} /> <span>{t(problem)}</span> <Button small minimal intent="primary" text={t('Put it back')} onClick={() => step.fix(c)} /></>
-                    : <><Icon icon="hand-up" size={14} /> <span>{t('Your turn. Next opens when it is done.')}</span> <Button small minimal intent="primary" text={t('Show me')} onClick={() => step.doIt(c)} /></>}
+                    : <><Icon icon={hint ? 'info-sign' : 'hand-up'} size={14} /> <span>{hint ? t(hint) : t('Your turn. Next opens when it is done.')}</span> <Button small minimal intent="primary" text={t('Show me')} onClick={() => step.doIt(c)} /></>}
               </div>
             )}
             <div className="tour-actions">

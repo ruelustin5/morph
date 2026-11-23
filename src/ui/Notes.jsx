@@ -90,6 +90,30 @@ function Turn({ c, index }) {
 }
 
 /** Notes shown on top of the in-app presentation (S to show or hide). They can be edited right there. */
+// Where the notes panel sits while presenting: fractions of the window, so it follows window resizes.
+const BOX_KEY = 'morph-present-notes-box';
+const loadBox = () => {
+  try { const b = JSON.parse(localStorage.getItem(BOX_KEY) || 'null'); return b && [b.x, b.y, b.w, b.h].every(Number.isFinite) ? b : null; } catch (e) { return null; }
+};
+const MIN_W = 260, MIN_H = 120, EDGE = 8;
+function clampBox(b, W, H, mode) {
+  const w = Math.max(MIN_W, Math.min(b.w, W - 2 * EDGE)), h = Math.max(MIN_H, Math.min(b.h, H - 2 * EDGE));
+  if (mode === 'size') {
+    const x = Math.min(b.x, W - MIN_W - EDGE), y = Math.min(b.y, H - MIN_H - EDGE);
+    return { x, y, w: Math.min(w, W - x - EDGE), h: Math.min(h, H - y - EDGE) };
+  }
+  return { x: Math.max(EDGE, Math.min(b.x, W - w - EDGE)), y: Math.max(EDGE, Math.min(b.y, H - h - EDGE)), w, h };
+}
+function useViewport() {
+  const [v, setV] = useState({ w: window.innerWidth, h: window.innerHeight });
+  useEffect(() => {
+    const f = () => setV({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
+  return v;
+}
+
 export function PresenterNotes({ c, index }) {
   useController(c);
   const [show, setShow] = useState(() => { try { return localStorage.getItem('morph-present-notes') === '1'; } catch (e) { return false; } });
@@ -115,6 +139,45 @@ export function PresenterNotes({ c, index }) {
   const focused = useRef(false);
   useEffect(() => { if (!focused.current) setText(saved); }, [sid, saved]);
   const can = c.canWrite !== false;
+
+  // Move (drag the top bar) and resize (drag the corner) anywhere on the screen; remembered on this device.
+  const vp = useViewport();
+  const [box, setBox] = useState(loadBox);
+  const [drag, setDrag] = useState(null);
+  const panelRef = useRef(null);
+  const keep = (b) => { try { if (b) localStorage.setItem(BOX_KEY, JSON.stringify(b)); else localStorage.removeItem(BOX_KEY); } catch (e) { /* ignore */ } };
+  const px = box ? clampBox({ x: box.x * vp.w, y: box.y * vp.h, w: box.w * vp.w, h: box.h * vp.h }, vp.w, vp.h) : null;
+  const start = (mode) => (e) => {
+    if (e.button !== 0 || !panelRef.current) return;
+    if (mode === 'move' && e.target.closest('button')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = panelRef.current.getBoundingClientRect();
+    const x0 = e.clientX, y0 = e.clientY;
+    const el = e.currentTarget;
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    setDrag(mode);
+    let last = null;
+    const move = (ev) => {
+      const W = window.innerWidth, H = window.innerHeight, dx = ev.clientX - x0, dy = ev.clientY - y0;
+      const b = clampBox(mode === 'move' ? { x: r.left + dx, y: r.top + dy, w: r.width, h: r.height } : { x: r.left, y: r.top, w: r.width + dx, h: r.height + dy }, W, H, mode === 'move' ? 'move' : 'size');
+      last = { x: b.x / W, y: b.y / H, w: b.w / W, h: b.h / H };
+      setBox(last);
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      setDrag(null);
+      if (last) keep(last);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  };
+  const reset = () => { setBox(null); keep(null); };
+  const style = px ? { left: px.x, top: px.y, width: px.w, height: px.h } : undefined;
+
   return (
     <>
       <Turn c={c} index={index} />
@@ -124,10 +187,17 @@ export function PresenterNotes({ c, index }) {
         </button>
       </Tooltip>
       {show && slide && (
-        <div className="pn-panel" role="note" onClick={(e) => e.stopPropagation()}>
-          <div className="pn-head">
-            <span>{t('Slide {n}', { n: index + 1 })}</span>
+        <div ref={panelRef} className={'pn-panel' + (px ? ' is-placed' : '') + (drag ? ' is-dragging' : '')} style={style} role="note"
+          onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+          <div className="pn-head" onPointerDown={start('move')} onDoubleClick={(e) => { if (!e.target.closest('button')) reset(); }} title={t('Drag to move the notes. Double-click to put them back.')}>
+            <Icon icon="drag-handle-horizontal" size={14} className="pn-grip" />
+            <span className="pn-slide">{t('Slide {n}', { n: index + 1 })}</span>
             <span className="pn-hint">{can ? t('Click to edit. Esc to go back to the slides.') : ''}</span>
+            {px && (
+              <Tooltip content={t('Put the notes back at the bottom')} placement="bottom-end" compact>
+                <button type="button" className="pn-reset" onClick={reset} aria-label={t('Put the notes back at the bottom')}><Icon icon="reset" size={12} /></button>
+              </Tooltip>
+            )}
           </div>
           <textarea
             className="pn-text"
@@ -139,6 +209,7 @@ export function PresenterNotes({ c, index }) {
             onChange={(e) => { setText(e.target.value); c.setNote(sid, e.target.value); }}
             aria-label={t('Notes for slide {n}', { n: index + 1 })}
           />
+          <span className="pn-resize" onPointerDown={start('size')} title={t('Drag to resize')} aria-hidden="true" />
         </div>
       )}
     </>

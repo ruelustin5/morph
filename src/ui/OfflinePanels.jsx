@@ -4,11 +4,27 @@ import React, { useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Button, Icon, Tab, Tabs } from '@blueprintjs/core';
 import { TextSection, BackgroundSection } from 'opn/side-panel/side-panel';
-import { getTextQuickAddPresets } from 'opn/side-panel/text-panel';
 import { ColorPicker } from 'opn/toolbar/color-picker';
 import { registerNextDomDrop } from 'opn/canvas/page';
 import { t } from 'opn/utils/l10n';
 import { t as tr } from '../i18n';
+
+// New text follows the presentation's theme (or the base style): heading, subheading and body text.
+let C = null;
+export function bindStyle(c) { C = c; }
+const PRESETS = [
+  { labelKey: 'sidePanel.createHeader', previewFontSize: 25, kind: 'head', size: 76, textKey: 'sidePanel.headerText' },
+  { labelKey: 'sidePanel.createSubHeader', previewFontSize: 18, kind: 'sub', size: 44, textKey: 'sidePanel.subHeaderText' },
+  { labelKey: 'sidePanel.createBody', previewFontSize: 14, kind: 'body', size: 30, textKey: 'sidePanel.bodyText' },
+];
+function presetAttrs(p) {
+  const st = C && C.project ? C.currentStyle() : null;
+  const a = { fontSize: p.size, text: t(p.textKey) };
+  if (!st) return { ...a, fontFamily: 'Roboto' };
+  if (p.kind === 'head') return { ...a, fontFamily: st.head, fontWeight: st.hw, fill: st.text };
+  if (p.kind === 'sub') return { ...a, fontFamily: st.body, fontWeight: 'bold', fill: st.sub };
+  return { ...a, fontFamily: st.body, fontWeight: 'normal', fill: st.text };
+}
 
 const readAsDataURL = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();
@@ -47,7 +63,8 @@ const OfflineTextPanel = observer(({ store }) => {
   const fileRef = useRef(null);
   React.useEffect(() => { store.loadFont('Roboto'); }, [store]);
   React.useEffect(() => { store.fonts.forEach((f) => store.loadFont(f.fontFamily)); }, [store, store.fonts]);
-  const presets = getTextQuickAddPresets();
+  const st = C && C.project ? C.currentStyle() : null;
+  React.useEffect(() => { if (st) { store.loadFont(st.head); store.loadFont(st.body); } }, [st && st.head, st && st.body]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="offline-panel">
       <Tabs id="morph-text-tabs" selectedTabId={tab} onChange={(id) => setTab(id)} large>
@@ -56,13 +73,15 @@ const OfflineTextPanel = observer(({ store }) => {
       </Tabs>
       {tab === 'text' && (
         <div className="offline-body">
-          {presets.map((p) => (
-            <DraggableItem key={p.labelKey} style={{ fontSize: Math.min(30, p.previewFontSize) + 'px' }} className="quick-text"
-              onSelect={(pos) => addText(store, { ...(pos || {}), ...p.buildAttrs() })}>
+          {PRESETS.map((p) => (
+            <DraggableItem key={p.labelKey} className="quick-text"
+              style={{ fontSize: Math.min(30, p.previewFontSize) + 'px', fontFamily: st ? `'${p.kind === 'head' ? st.head : st.body}', sans-serif` : undefined, fontWeight: p.kind === 'body' ? 400 : 700 }}
+              onSelect={(pos) => addText(store, { ...(pos || {}), ...presetAttrs(p) })}>
               {t(p.labelKey)}
             </DraggableItem>
           ))}
           <p className="panel-hint">{tr('Click to add, or drag onto the slide.')}</p>
+          {st && <p className="panel-hint">{st.id === 'base' ? tr('New text and shapes use the base style. Pick a theme (+ › Layouts and themes) to change it.') : tr('New text and shapes follow the theme {name}.', { name: tr(st.name) })}</p>}
         </div>
       )}
       {tab === 'font' && (

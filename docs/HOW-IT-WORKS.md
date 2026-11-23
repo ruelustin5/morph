@@ -43,8 +43,16 @@ browser, and removes it from the address bar. Removing a person gives the projec
   MathJax extensions, plus small versions written here (siunitx, dsfont, bbm, esint, xfrac, nicefrac as macros).
   `\usepackage{…}` still works for known packages; unknown ones (tikz) are reported. Inserted as a
   self-contained SVG (`custom.latex` keeps the source).
+  That list is every package MathJax can run, so there is no online "library" to search: a real LaTeX package
+  cannot run in MathJax (and CTAN does not allow requests from web pages). What does work is a package's
+  command definitions: drop a `.sty` / `.tex` file (or type the lines) and `src/latex-macros.js` reads
+  `\newcommand`, `\renewcommand`, `\providecommand`, `\DeclareMathOperator`, `\DeclarePairedDelimiter`, `\def`,
+  `\let`, simple `\NewDocumentCommand` and `\newenvironment` into MathJax macros. Each one is tried in MathJax
+  (`checkMacros`) and dropped if it uses something MathJax does not have. They are kept in `settings.latex.files`.
 - **Notes and slide owners**: `notes` and `owners` maps in the project (per slide id), merged key by key between
-  people. Notes show in the in-app presenter (S) and are removed from exported files. People's names for owners
+  people. Notes show in the in-app presenter (S) and are removed from exported files. While presenting, the notes
+  panel can be dragged by its top bar and resized by its corner; its place is kept on the device (double-click
+  the bar to put it back). People's names for owners
   are kept in `settings.people`, inside the (encrypted) project.
 - **Languages**: `src/i18n.js` picks French when the browser prefers it (`morph-lang` in localStorage overrides);
   strings are English in the code and looked up in `src/i18n-fr.js`; the editor's own strings in
@@ -59,6 +67,10 @@ browser, and removes it from the address bar. Removing a person gives the projec
   with the old one (colors, fonts, corner radii and role IDs are mapped). Your own templates: right-click a slide.
 - **Panels**: click the open tab again (or the round arrow) to close the side panel; × or the Animation
   button closes the animation panel.
+- **Slide size**: ⋯ menu › Slide size (`src/ui/SlideSize.jsx`). It applies to every slide, so it is not in
+  the side panel; the content of each slide is scaled and centered with `fitPage`, unless that is turned off.
+- **Theme style**: new text (heading, subheading, body) and new shapes take the theme's fonts and colors, or a
+  base style when there is no theme; colors are chosen for contrast with the slide's background (`styleFor`).
 - **Presenting / export**: the same renderer draws thumbnails, the in-app presenter and the standalone
   `.html` export: space, click, arrows, PageUp/PageDown (presentation clickers), B or "." black screen,
   W or "," white screen, L laser pointer, F full screen, ? shortcuts, swipe on touch screens.
@@ -187,7 +199,8 @@ handles). It first bundles `src/export-entry.js` into `build/player.txt`, the pl
 | `src/render.js`, `src/player.js` | renderer, morph interpolation, presenter |
 | `src/export.js` | standalone HTML export |
 | `src/storage.js` | versions (thinning, rename, delete, chunked), images, project list, clean-up |
-| `src/mathjax.js` | LaTeX → SVG, `\usepackage` handling |
+| `src/mathjax.js` | LaTeX → SVG, `\usepackage` handling, your own commands |
+| `src/latex-macros.js` | reading command definitions out of .sty / .tex files |
 | `src/space.js` | encryption layer, invite codes, copying a project between places |
 | `src/web/platform.js`, `src/web/firebase-config.js` | website version: Firebase services, settings |
 | `src/themes.js` | themes and layouts |

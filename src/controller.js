@@ -8,7 +8,7 @@ import {
 } from './project';
 import { flattenPage } from './render';
 import { fitPage } from './builtin-templates';
-import { themeById, parseRoleId, roleId, COLOR_TOKENS, ROLES, decoRadius } from './themes';
+import { themeById, parseRoleId, roleId, COLOR_TOKENS, ROLES, decoRadius, BASE_STYLE, styleFor, contrast } from './themes';
 import { tutorialProject } from './tutorial';
 import { extractAssets, injectAssets, fetchAsset, ensureAsset } from './storage';
 import {
@@ -1523,6 +1523,12 @@ export class Controller {
   get settings() { return (this.project && this.project.settings) || {}; }
   get theme() { return themeById(this.settings.theme); }
 
+  /** Fonts and colors for new text, shapes, icons and equations on the open slide. */
+  currentStyle() {
+    const sl = this.project && this.project.slides[this.active];
+    return styleFor(this.theme, sl && sl.page && sl.page.background);
+  }
+
   setSettings(patch) {
     if (!this.project) return;
     this.project.settings = { ...this.settings, ...patch };
@@ -1553,21 +1559,36 @@ export class Controller {
   setTheme(id, { restyle = false } = {}) {
     const from = this.theme;
     const to = themeById(id);
-    if (restyle && from && to && from.id !== to.id) this.restyleTheme(from, to);
+    if (restyle && to && (!from || from.id !== to.id)) this.restyleTheme(from || BASE_STYLE, to);
     this.setSettings({ theme: to ? to.id : null });
   }
 
+  /** Slides a restyle would change: those made with theme A, or every slide when there was no theme. */
+  restyleCount(A) { return A ? this.themeSlides(A.id).length : (this.project ? this.project.slides.length : 0); }
+
   restyleTheme(A, B) {
+    const base = A.id === 'base';
     const colors = new Map();
-    for (const k of COLOR_TOKENS) { const c = A[k].toLowerCase(); if (!colors.has(c)) colors.set(c, B[k]); }
-    const fonts = new Map([[A.body, [B.body, null]], [A.head, [B.head, B.hw]]]);
+    // From no theme, white objects become the theme's light text color (white backgrounds become its paper).
+    // Text colors first: when two tokens share a color (ink and panel in the base style), text wins.
+    const ORDER = ['ink', 'muted', 'strong', 'onPanel', 'onPanelMuted', 'accent', 'accent2', 'onAccent', 'card', 'line', 'panel', 'paper'];
+    for (const k of ORDER) { if (base && k === 'paper') continue; const c = A[k].toLowerCase(); if (!colors.has(c)) colors.set(c, B[k]); }
+    if (base) {
+      // the editor's own defaults count as "no style" too
+      for (const [c, k] of [['rgba(191, 191, 191, 100)', 'accent'], ['black', 'ink'], ['#000000', 'ink'], ['#000', 'ink'], ['white', 'onPanel'], ['#fff', 'onPanel']]) if (!colors.has(c)) colors.set(c, B[k]);
+    }
+    const bgs = new Set([A.paper.toLowerCase(), ...(base ? ['#fff', 'white', '#ffffff'] : [])]);
+    const fonts = new Map([[A.body, [B.body, null]], [A.head, [B.head, B.hw]], ...(base ? [['Roboto', [B.body, null]]] : [])]);
     const s = Math.min(this.project.width / 1920, this.project.height / 1080);
     const ids = new Map(ROLES.map((r) => [roleId(A.id, r), roleId(B.id, r)]));
     const touched = [];
-    for (const k of this.themeSlides(A.id)) {
+    const which = base ? this.project.slides.map((x, i) => i) : this.themeSlides(A.id);
+    for (const k of which) {
       const sl = this.project.slides[k];
       const page = deepClone(sl.page);
-      if (String(page.background || '').toLowerCase() === A.paper) page.background = B.paper;
+      // From no theme every plain-colored background takes the theme's paper (pictures and gradients stay).
+      const bg0 = String(page.background || '').toLowerCase();
+      if (bgs.has(bg0) || (base && /^(#[0-9a-f]{3,8}|rgba?\(|white|black)/.test(bg0))) page.background = B.paper;
       const walk = (ch) => {
         for (const el of ch || []) {
           if (el.children) walk(el.children);
@@ -1587,6 +1608,10 @@ export class Controller {
         }
       };
       walk(page.children);
+      // Text must stay readable on its new background.
+      const readable = styleFor(B, page.background).text;
+      const fixText = (ch) => { for (const el of ch || []) { if (el.children) fixText(el.children); if (el.type === 'text' && typeof el.fill === 'string' && contrast(el.fill, page.background) < 2.2) el.fill = readable; } };
+      if (base) fixText(page.children);
       const anim = {};
       for (const [id, v] of Object.entries(sl.anim || {})) anim[ids.get(id) || id] = v;
       sl.page = page;
@@ -1599,6 +1624,23 @@ export class Controller {
       this.liveTouch(touched);
       this.toast(tn(touched.length, '1 slide restyled with {theme}', '{n} slides restyled with {theme}', { theme: t(B.name) }), 'success');
     }
+  }
+
+  // Slide size is the same for every slide. With fit on, each slide's content is scaled and centered.
+  setSlideSize(W, H, fit = true) {
+    const p = this.project;
+    if (!p) return false;
+    W = Math.round(Math.max(200, Math.min(8000, Number(W) || 0)));
+    H = Math.round(Math.max(200, Math.min(8000, Number(H) || 0)));
+    if (W === p.width && H === p.height) return false;
+    if (fit) for (const sl of p.slides) sl.page = fitPage(deepClone(sl.page), p.width, p.height, W, H);
+    p.width = W; p.height = H;
+    this.loadSlide(this.active);
+    this.markDirty();
+    this.liveTouch(fit ? p.slides.map((x) => x.id) : []);
+    this.bumpRender();
+    this.toast(t('All slides are now {w} × {h}', { w: W, h: H }), 'success');
+    return true;
   }
 
   markDirty() {

@@ -97,7 +97,11 @@ export function TemplateGallery({ c }) {
               {curCount > 0
                 ? <>{t('This presentation uses {theme}.', { theme: t(cur.name) })} <Button small minimal intent="primary" text={tn(curCount, 'Switch 1 slide to {theme}', 'Switch {n} slides to {theme}', { theme: t(T.name) })}
                     onClick={() => c.setTheme(T.id, { restyle: true })} /></>
-                : <>{t('Layouts of a theme share their shapes, so going from one to the next morphs smoothly.')}</>}
+                : !cur && c.project.slides.length > 0
+                  ? <>{t('Layouts of a theme share their shapes, so going from one to the next morphs smoothly.')} <Button small minimal intent="primary"
+                      text={tn(c.project.slides.length, 'Apply {theme} to the slide', 'Apply {theme} to all {n} slides', { theme: t(T.name) })}
+                      onClick={() => c.setTheme(T.id, { restyle: true })} /></>
+                  : <>{t('Layouts of a theme share their shapes, so going from one to the next morphs smoothly.')}</>}
             </p>
           )}
           {view !== 'yours' && (

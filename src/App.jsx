@@ -23,12 +23,15 @@ import { OfflineTextSection, OfflineBackgroundSection } from './ui/OfflinePanels
 import { makeObjectMenu } from './ui/ObjectMenu';
 import { EquationSection, bindEquations } from './ui/EquationPanel';
 import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
+import { SlideSizeDialog } from './ui/SlideSize';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
 import { NotesBar } from './ui/Notes';
 import { Tour, tourSeen } from './ui/Tour';
 import { PhotosSection, IconsSection, bindOnline } from './ui/OnlinePanels';
+import { bindStyle } from './ui/OfflinePanels';
+import { setDefaultColor } from 'opn/side-panel/elements-panel';
 import { t, tn, tj, LANG, setLang } from './i18n';
 
 // Duplicate / delete / position are on the selection's own bar and in the right-click menu.
@@ -44,7 +47,7 @@ const toggleTab = (sec) => ({
 
 // Editor side-panel sections that work without the editor's online catalogs (see README.md).
 const SECTIONS = DEFAULT_SECTIONS
-  .filter((s) => ['text', 'elements', 'upload', 'background', 'layers', 'size'].includes(s.name))
+  .filter((s) => ['text', 'elements', 'upload', 'background', 'layers'].includes(s.name))
   .map((s) => (s.name === 'text' ? OfflineTextSection : s.name === 'background' ? OfflineBackgroundSection : s));
 SECTIONS.splice(SECTIONS.findIndex((s) => s.name === 'elements') + 1, 0, EquationSection);
 // The website version can reach free online libraries (an artifact page cannot).
@@ -194,6 +197,7 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
             else if (r.reason !== 'declined') c.toast(t('Downloads are not available here.'), 'warning');
           }} />
           {c.isOwner && <MenuItem icon="folder-open" text={t('Open project file…')} onClick={() => fileRef.current && fileRef.current.click()} />}
+          <MenuItem icon="fullscreen" text={t('Slide size…')} onClick={() => c.setUi({ slideSize: true })} />
           <MenuItem icon="translate" text={LANG === 'fr' ? 'English' : 'Français'} onClick={() => setLang(LANG === 'fr' ? 'en' : 'fr')} />
           <MenuItem icon="learning" text={t('Tutorial')} onClick={() => c.setUi({ tour: 'ask' })} />
           {typeof window !== 'undefined' && window.__web && window.__web.configured && (c.isOwner
@@ -254,6 +258,9 @@ export const App = observer(function App({ c, store }) {
   STORE = store;
   bindEquations(c);
   bindOnline(c);
+  bindStyle(c);
+  // New shapes and lines take the theme's (or base style's) accent color.
+  if (c.project) setDefaultColor(c.currentStyle().shapeColor);
   const toasterRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [presenting, setPresenting] = useState(null);
@@ -309,6 +316,12 @@ export const App = observer(function App({ c, store }) {
     if (presentingRef.current) return;
     const a = document.activeElement;
     if (a && a.closest && a.closest('.sorter, .anim, .topbar, .bp5-overlay')) return;
+    // Ctrl+D with nothing selected duplicates the slide (with objects selected, it duplicates them).
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyD' && !st.selectedElements.length) {
+      e.preventDefault();
+      c.duplicateSlide(c.active);
+      return;
+    }
     handleHotkey(e, st);
   };
 
@@ -364,6 +377,7 @@ export const App = observer(function App({ c, store }) {
       )}
       {historyOpen && <VersionHistory c={c} onClose={() => setHistoryOpen(false)} />}
       <SaveTemplateDialog c={c} />
+      <SlideSizeDialog c={c} />
       <TemplateGallery c={c} />
       <Tour c={c} />
       <Dialog isOpen={!!(ready && c.needsName)} title={t('What’s your name?')} icon="user" isCloseButtonShown={!!c.myName()} canEscapeKeyClose={!!c.myName()} canOutsideClickClose={false}

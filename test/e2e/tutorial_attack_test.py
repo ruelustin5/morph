@@ -71,7 +71,7 @@ async def main(lang='en-US'):
         await A.hover('.slide-item[data-index="0"] .slide-thumb'); await A.wait_for_timeout(200)
         await A.click('.slide-item[data-index="0"] .slide-actions .mini-btn'); await A.wait_for_timeout(700)
         t1 = await task()
-        ok('copying slide 1 is caught', t1 and ('Put it back' in t1 or 'Remettre' in t1) and await nxt_disabled(), t1)
+        ok('copying slide 1 is caught and explained', t1 and ('slide 1' in t1 or 'diapo 1' in t1) and await nxt_disabled(), t1)
         await A.click('.tour-task button'); await A.wait_for_timeout(700)
         ok('"Put it back" restores the slides', (await state())['n'] == 2)
         # wrong: delete slide 2 with the keyboard in the slide list
@@ -93,6 +93,18 @@ async def main(lang='en-US'):
         ok('changing slide 2 is caught', t4 and ('Put' in t4 or 'Remettre' in t4), t4)
         await A.click('.tour-task button'); await A.wait_for_timeout(700)
         ok('slide 2 is back to how it was', (await state())['sun2'] == '1180')
+        # wrong: Ctrl+D with SUN selected on the canvas duplicates the shape
+        await ev("(() => { const c = window.__morph.controller; c.selectSlide(1); setTimeout(() => c.store.selectElements(['tut-sun']), 150); })()"); await A.wait_for_timeout(500)
+        await ev("document.activeElement && document.activeElement.blur()")
+        await A.keyboard.press('Control+d'); await A.wait_for_timeout(800)
+        t3b = await task()
+        ok('duplicating the shape instead of the slide is explained', t3b and ('object on the slide' in t3b or 'objet sur la diapo' in t3b), t3b)
+        await A.click('.tour-task button'); await A.wait_for_timeout(700)
+        # wrong: "Duplicate as new objects"
+        await ev("window.__morph.controller.duplicateSlide(1, { unlinked: true })"); await A.wait_for_timeout(700)
+        t3c = await task()
+        ok('"Duplicate as new objects" is explained', t3c and ('new objects' in t3c or 'nouveaux objets' in t3c), t3c)
+        await A.click('.tour-task button'); await A.wait_for_timeout(700)
         # wrong: two copies
         await ev("(() => { const c = window.__morph.controller; c.duplicateSlide(1); c.duplicateSlide(1); })()"); await A.wait_for_timeout(700)
         t4b = await task()
@@ -108,14 +120,20 @@ async def main(lang='en-US'):
         await ev("(() => { const b = document.querySelector('.tour-task button'); b.click(); setTimeout(() => { const b2 = document.querySelector('.tour-task button'); if (b2) b2.click(); }, 30); })()"); await A.wait_for_timeout(1200)
         ok('Show me twice still gives one copy', (await state())['n'] == 3 and await nxt_disabled() is False, str((await state())['n']))
         await ev("window.__morph.controller.deleteSlide(2)"); await A.wait_for_timeout(500)
-        # right
-        await A.hover('.slide-item[data-index="1"] .slide-thumb'); await A.wait_for_timeout(200)
-        await A.click('.slide-item[data-index="1"] .slide-actions .mini-btn'); await A.wait_for_timeout(700)
-        ok('copying slide 2 is accepted', await nxt_disabled() is False, await task())
+        # right, with the keyboard: Ctrl+D with nothing selected duplicates the slide
+        await ev("(() => { const c = window.__morph.controller; c.selectSlide(1); setTimeout(() => c.store.selectElements([]), 100); })()"); await A.wait_for_timeout(400)
+        await A.mouse.click(700, 830); await A.wait_for_timeout(200)   # empty canvas area
+        await ev("window.__morph.store.selectElements([])")
+        await A.keyboard.press('Control+d'); await A.wait_for_timeout(800)
+        ok('Ctrl+D with nothing selected duplicates the slide', await nxt_disabled() is False, await task())
         await click_next()
 
         # --- the hands-on step "change SUN on slide 3" ---------------------------------------------
         ok('reached the change step', await step() == 'change')
+        await ev("window.__morph.controller.selectSlide(0)"); await A.wait_for_timeout(500)
+        hint = await task()
+        ok('being on the wrong slide is pointed out', hint and ('slide 1' in hint or 'diapo 1' in hint), hint)
+        await ev("window.__morph.controller.selectSlide(2)"); await A.wait_for_timeout(500)
         ok('Next is off until it is done', await nxt_disabled() is True)
         await ev("(() => { const c = window.__morph.controller; c.selectSlide(1); setTimeout(() => { c.store.getElementById('tut-sun').set({ fill: '#000000' }); }, 100); })()"); await A.wait_for_timeout(900)
         t5 = await task()

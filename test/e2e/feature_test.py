@@ -144,7 +144,7 @@ async def main():
         if await jb.count():
             await jb.click(); await A.wait_for_timeout(400)
             print('K2. cut set:', await ev("(() => { const c = window.__morph.controller; const id = c.selectedLeafIds()[0]; return c.project.slides[window.__mk].anim[id]; })()"))
-        await A.click('.obj-head button[aria-label=\"Link to another ID\"]'); await A.wait_for_timeout(400)
+        await A.click('.obj-actions button:has-text(\"Same object as\")'); await A.wait_for_timeout(400)
         await A.screenshot(path=OUT + 'ft_link.png')
         await A.keyboard.press('Escape')
         # --- L. guest name prompt

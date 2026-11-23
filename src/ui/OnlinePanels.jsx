@@ -134,7 +134,7 @@ const PhotosPanel = observer(function PhotosPanel({ store }) {
 // One request per icon set (not one per icon): the public Iconify API refuses too many requests at
 // once, which left most previews broken. Icons are drawn from their data as <img> data URLs, so
 // nothing from the API ever runs as page code.
-const ICON_CACHE = new Map(); // "prefix:name" → svg markup (currentColor already replaced)
+const ICON_CACHE = new Map(); // "prefix:name" → svg markup (with currentColor)
 const ICON_COLOR = '#202124';
 
 function iconSvg(set, name) {
@@ -152,7 +152,7 @@ function iconSvg(set, name) {
   if (vFlip || icon.vFlip) tr.push(`translate(0 ${h}) scale(1 -1)`);
   if (rotate || icon.rotate) tr.push(`rotate(${90 * ((rotate || 0) + (icon.rotate || 0))} ${w / 2} ${h / 2})`);
   const body = tr.length ? `<g transform="${tr.join(' ')}">${icon.body}</g>` : icon.body;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.left || 0} ${icon.top || 0} ${w} ${h}" width="${w}" height="${h}">${body.replace(/currentColor/g, ICON_COLOR)}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.left || 0} ${icon.top || 0} ${w} ${h}" width="${w}" height="${h}">${body}</svg>`;
 }
 
 async function searchIcons(q) {
@@ -176,7 +176,7 @@ async function searchIcons(q) {
   }
   const ok = list.filter((it) => ICON_CACHE.has(it.id));
   if (list.length && !ok.length) throw new Error('icons failed');
-  return ok.map((it) => ({ ...it, url: svgToURL(ICON_CACHE.get(it.id)) }));
+  return ok.map((it) => ({ ...it, url: svgToURL(ICON_CACHE.get(it.id).replace(/currentColor/g, ICON_COLOR)) }));
 }
 
 const IconsPanel = observer(function IconsPanel({ store }) {
@@ -186,7 +186,9 @@ const IconsPanel = observer(function IconsPanel({ store }) {
     if (!page) return;
     const size = Math.min(store.width, store.height) * 0.2;
     const x = pos ? pos.x - size / 2 : (store.width - size) / 2, y = pos ? pos.y - size / 2 : (store.height - size) / 2;
-    page.addElement({ type: 'svg', src: it.url, width: size, height: size, x, y, keepRatio: true });
+    // inserted in the theme's text color (or the base style's)
+    const color = C && C.project ? C.currentStyle().text : ICON_COLOR;
+    page.addElement({ type: 'svg', src: svgToURL(ICON_CACHE.get(it.id).replace(/currentColor/g, color)), width: size, height: size, x, y, keepRatio: true });
   };
   return (
     <div className="online-panel">

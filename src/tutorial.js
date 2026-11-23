@@ -79,8 +79,25 @@ const isCopy = (c) => {
   const sl = c.project && c.project.slides[2];
   if (!sl) return false;
   const ids = new Set(els(sl).map((e) => e.id));
-  return els(ORIGINAL()[1]).every((e) => ids.has(e.id));
+  return els(sl).length === els(ORIGINAL()[1]).length && els(ORIGINAL()[1]).every((e) => ids.has(e.id));
 };
+/** How slide k differs from the original slide `og` (0 or 1): objects missing, added, or changed. */
+function diff(c, k, og) {
+  const a = els(c.project && c.project.slides[k]);
+  const b = els(ORIGINAL()[og]);
+  const ids = new Set(b.map((e) => e.id));
+  return {
+    missing: b.filter((e) => !a.some((x) => x.id === e.id)).map((e) => e.id),
+    added: a.filter((x) => !ids.has(x.id)),
+    changed: b.filter((e) => { const x = a.find((y) => y.id === e.id); return x && !sameEl(x, e); }).map((e) => e.id),
+  };
+}
+/** A slide made of the same kinds of objects as the original slide `og`, but with other IDs. */
+const looksLike = (c, k, og) => {
+  const a = els(c.project && c.project.slides[k]), b = els(ORIGINAL()[og]);
+  return a.length === b.length && b.every((e) => a.some((x) => x.type === e.type && Math.abs((x.width || 0) - (e.width || 0)) < 2));
+};
+const NAMES = { [SUN]: 'SUN', [BOX]: 'BOX', [TITLE]: 'TITLE', [CAP]: 'CAPTION' };
 const sunChanged = (c) => { const a = onSlide(c, 2, SUN); return !!a && !sameEl(a, els(ORIGINAL()[1]).find((e) => e.id === SUN)); };
 
 const sunNamed = (c) => !!c.project && (c.project.objects[SUN] || {}).name === 'SUN';
@@ -149,34 +166,66 @@ export const TUTORIAL_STEPS = [
     body: 'From slide 1 to slide 2, SUN moves, grows and turns red by itself. That is a morph. BOX is not on slide 2, so it fades out. The caption is new, so it fades in. The title has the same ID on both: it moves and its words change.',
   },
   {
-    id: 'dup', target: '.sorter .slide-item[data-index="1"]', interactive: true, need: 'base', setup: (c) => show(c, 1, null),
-    title: 'Your turn: copy slide 2',
-    body: 'Hover slide 2 and click its copy button (or press Ctrl+D). The copy keeps the same IDs, so SUN is on slide 3 too.',
+    id: 'dup', target: '.sorter .slide-item[data-index="1"]', interactive: true, need: 'base',
+    setup: (c) => { show(c, 1, null); setTimeout(() => { try { c.store.selectElements([]); } catch (e) { /* ignore */ } }, 120); },
+    title: 'Your turn: duplicate slide 2',
+    body: 'In the slide list on the left, hover slide 2 and click its Duplicate button (the two small squares), or right-click slide 2 › Duplicate. The new slide 3 keeps the same IDs, so SUN is on it too.',
     check: (c) => STATE.dup(c),
     problem: (c) => {
+      const p = c.project;
       if (!sunNamed(c)) return 'SUN was renamed. The tutorial needs its name to stay SUN.';
-      if (!STATE.base(c)) return 'Slide 1 or slide 2 was changed. Put them back to continue.';
-      if (c.project.slides.length > 2 && !isCopy(c)) return 'Slide 3 is not a copy of slide 2.';
-      if (c.project.slides.length > 3) return 'One copy is enough.';
+      if (p.slides.length < 2) return 'A slide was deleted.';
+      // what happened to slide 2? (duplicating slide 1 puts its copy in second place)
+      if (p.slides.length >= 3 && diff(c, 1, 0).missing.length === 0 && diff(c, 1, 0).added.length === 0 && intact(c, 0)) {
+        return 'That duplicated slide 1. Duplicate slide 2 instead: the one with the big red circle.';
+      }
+      const d2 = diff(c, 1, 1);
+      if (d2.added.length) {
+        const copyOfOne = d2.added.some((x) => els(ORIGINAL()[1]).some((e) => e.type === x.type && Math.abs((x.width || 0) - (e.width || 0)) < 2));
+        return copyOfOne
+          ? 'That duplicated an object on the slide, not the slide itself. Use the Duplicate button of slide 2 in the slide list on the left.'
+          : 'Something was added to slide 2.';
+      }
+      if (d2.missing.length) return t('{names} was deleted from slide 2.', { names: d2.missing.map((id) => NAMES[id] || '?').join(', ') });
+      if (d2.changed.length) return t('Slide 2 was changed ({names}).', { names: d2.changed.map((id) => NAMES[id] || '?').join(', ') });
+      if (!intact(c, 0)) return 'Slide 1 was changed.';
+      if (p.slides.length >= 3 && !isCopy(c)) {
+        const s3 = els(p.slides[2]);
+        if (!s3.length) return 'That added an empty slide. Duplicate slide 2 instead.';
+        if (looksLike(c, 2, 1)) return 'That copy has new objects (“Duplicate as new objects”), so nothing would morph. Use plain Duplicate.';
+        if (diff(c, 2, 1).added.length && !diff(c, 2, 1).missing.length) return 'Slide 3 is a copy of slide 2 with something added.';
+        return 'Slide 3 is not a copy of slide 2.';
+      }
+      if (p.slides.length > 3) return 'One copy is enough.';
       return null;
     },
-    fix: (c) => restore(c, 'base', 1),
+    fix: (c) => { restore(c, 'base', 1); setTimeout(() => { try { c.store.selectElements([]); } catch (e) { /* ignore */ } }, 120); },
     doIt: (c) => { restore(c, 'base', 1); c.duplicateSlide(1); c.selectSlide(2); },
   },
   {
     id: 'change', target: '.raeditor-workspace-container', interactive: true, need: 'dup',
     setup: (c) => show(c, 2, SUN),
     title: 'Now change SUN on slide 3',
-    body: 'Drag SUN somewhere else, make it smaller, or give it another color in the toolbar. Whatever you change will be animated.',
+    body: 'On slide 3, drag SUN (the red circle) somewhere else, make it smaller with a corner handle, or give it another color in the toolbar. Whatever you change will be animated.',
     check: (c) => STATE.changed(c),
     problem: (c) => {
+      const p = c.project;
       if (!sunNamed(c)) return 'SUN was renamed. The tutorial needs its name to stay SUN.';
-      if (c.project.slides.length > 3) return 'There are more slides than the tutorial needs.';
+      if (p.slides.length > 3) return 'There are more slides than the tutorial needs.';
+      if (!p.slides[2]) return 'Slide 3 is gone.';
       if (!intact(c, 1)) return 'That was slide 2. Change SUN on slide 3 (the copy).';
-      if (!intact(c, 0)) return 'Slide 1 was changed. Put it back to continue.';
-      if (!c.project.slides[2]) return 'Slide 3 is gone.';
-      if (!onSlide(c, 2, SUN)) return 'SUN is not on slide 3 anymore.';
-      if (!isCopy(c)) return 'Slide 3 is not a copy of slide 2 anymore.';
+      if (!intact(c, 0)) return 'Slide 1 was changed.';
+      const d3 = diff(c, 2, 1);
+      if (d3.missing.includes(SUN)) return 'SUN is not on slide 3 anymore.';
+      if (d3.missing.length) return t('{names} was deleted from slide 3.', { names: d3.missing.map((id) => NAMES[id] || '?').join(', ') });
+      if (d3.added.length) return 'Slide 3 has an extra object (did you duplicate SUN?). Change SUN itself instead.';
+      return null;
+    },
+    // Not a mistake, but worth saying: where they are, or what they changed instead.
+    hint: (c) => {
+      if (c.active !== 2) return t('You are on slide {n}. Click slide 3 in the slide list first.', { n: c.active + 1 });
+      const d3 = diff(c, 2, 1);
+      if (d3.changed.length && !d3.changed.includes(SUN)) return t('You changed {names}. This step is about SUN, the red circle.', { names: d3.changed.map((id) => NAMES[id] || '?').join(', ') });
       return null;
     },
     fix: (c) => { restore(c, 'dup', 2); setTimeout(() => { try { c.store.selectElements([SUN]); } catch (e) { /* ignore */ } }, 80); },
@@ -210,7 +259,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'notes', target: '.notes-bar', optional: true,
     title: 'Speaker notes',
-    body: 'What you want to say on each slide. While presenting, press S to see them, and you can change them right there. They are never in the exported file.',
+    body: 'What you want to say on each slide. While presenting, press S to see them: you can change them right there, and drag them anywhere on the screen. They are never in the exported file.',
   },
   {
     id: 'assign', target: '.sorter', optional: true,

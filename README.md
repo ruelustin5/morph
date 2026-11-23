@@ -19,10 +19,12 @@ browser, free, and you can edit together with other people at the same time.
   Once a theme is chosen, **+** offers its layouts. Switch theme later and the slides follow.
 - **Together, without accounts.** Every person you invite gets their own secret link. They open it and they are in,
   live, with no account. Remove a person and their link stops working.
-- **Speaker notes** for each slide, visible to you while presenting (press **S**), never in the exported file.
+- **Speaker notes** for each slide, visible to you while presenting (press **S**, drag them anywhere), never in
+  the exported file.
   Slides can be **assigned to someone**, and everyone can show **only their own slides**.
 - **Equations** in LaTeX, with a package manager (physics, mhchem, siunitx, braket, cancel…): turn packages on
-  once for the presentation instead of writing `\usepackage`.
+  once for the presentation instead of writing `\usepackage`. Drop your own `.sty` or `.tex` file and its
+  `\newcommand` / `\DeclareMathOperator` lines work in every equation.
 - **Every Google Font** (1,800+), free **photos** (Wikimedia Commons, with the credit added to your notes) and **icons** (Iconify).
 - **Present** with the keyboard or a classroom clicker (Page Up/Down, B for a black screen, L for a laser dot), and
   **export** one standalone `.html` file that plays anywhere, even offline.

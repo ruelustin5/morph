@@ -61,6 +61,51 @@ export const THEMES = [
   },
 ];
 
+// The look of new text and shapes when no theme is chosen (a slide is never "unstyled").
+export const BASE_STYLE = {
+  id: 'base', name: 'Base', head: 'Outfit', body: 'Inter', hw: 'bold', radius: 16, shape: 'rounded',
+  paper: '#ffffff', panel: '#1b1f27', ink: '#1b1f27', muted: '#5f6672', onPanel: '#ffffff', onPanelMuted: '#c4c7cf',
+  accent: '#4c8df6', accent2: '#f2b84b', onAccent: '#ffffff', strong: '#0b57d0', card: '#f2f5fa', line: '#dde3ec',
+};
+
+// ---- colors that read well on a slide's background ----------------------------------------------
+function rgbOf(str) {
+  const s = String(str || '').trim();
+  let m = /#([0-9a-f]{3,8})\b/i.exec(s);
+  if (m) {
+    let h = m[1];
+    if (h.length === 3 || h.length === 4) h = h.split('').map((x) => x + x).join('');
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  m = /rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/i.exec(s);
+  if (m) return [+m[1], +m[2], +m[3]];
+  if (/\b(white)\b/i.test(s)) return [255, 255, 255];
+  if (/\b(black)\b/i.test(s)) return [0, 0, 0];
+  return null;
+}
+function lum(rgb) {
+  const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+}
+export function contrast(a, b) {
+  const ra = rgbOf(a), rb = rgbOf(b);
+  if (!ra || !rb) return 21;
+  const la = lum(ra), lb = lum(rb);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Fonts and colors for new text and shapes on a slide with this background (theme, or the base style). */
+export function styleFor(theme, background) {
+  const T = theme || BASE_STYLE;
+  const bg = rgbOf(background) ? background : T.paper;
+  const best = (...cs) => cs.reduce((a, b) => (contrast(b, bg) > contrast(a, bg) ? b : a));
+  const text = best(T.ink, T.onPanel);
+  const dark = text === T.onPanel && T.onPanel !== T.ink;
+  const sub = [dark ? T.accent : T.strong, dark ? T.accent2 : T.accent, dark ? T.onPanelMuted : T.muted].find((x) => contrast(x, bg) >= 3) || text;
+  const shape = [T.accent, T.accent2, T.strong].find((x) => contrast(x, bg) >= 1.6) || text;
+  return { ...T, text, sub, shapeColor: shape };
+}
+
 export const COLOR_TOKENS = ['paper', 'panel', 'ink', 'muted', 'onPanel', 'onPanelMuted', 'accent', 'accent2', 'onAccent', 'strong', 'card', 'line'];
 export const ROLES = ['panel', 'deco1', 'deco2', 'bar', 'title'];
 
