@@ -134,7 +134,7 @@ function text(T, str0, x, y, w, size, o = {}) {
   const str = t(str0);
   const lh = o.lh || 1.25;
   return {
-    id: o.id || tmpId(), type: 'text', text: str, x, y, width: w, height: Math.round(size * lh * estLines(str, size, w)),
+    id: o.id || tmpId(), type: 'text', text: str, x, y, width: w, height: Math.ceil(size * lh * estLines(str, size, w)),
     fontSize: size, fontFamily: o.head ? T.head : T.body, fontWeight: o.head ? T.hw : (o.weight || 'normal'), fontStyle: 'normal',
     fill: o.fill || T.ink, align: o.align || 'left', lineHeight: lh, letterSpacing: 0, opacity: 1,
   };

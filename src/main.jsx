@@ -4,6 +4,7 @@ import '@blueprintjs/core/lib/css/blueprint.css';
 import '@blueprintjs/select/lib/css/blueprint-select.css';
 import './app.css';
 import './theme.css';
+import Konva from 'konva';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { setTranslations } from 'opn/utils/l10n';
@@ -32,6 +33,6 @@ store.setShowCustomSvg(false);
 store.setSize(1920, 1080);
 
 const controller = new Controller(store, null);
-if (typeof window !== 'undefined') { window.__morph = { store, controller, startTransition, themeLayouts }; }
+if (typeof window !== 'undefined') { window.__morph = { store, controller, startTransition, themeLayouts, Konva }; }
 
 createRoot(document.getElementById('root')).render(<App c={controller} store={store} />);

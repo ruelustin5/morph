@@ -67,6 +67,8 @@ browser, and removes it from the address bar. Removing a person gives the projec
   with the old one (colors, fonts, corner radii and role IDs are mapped). Your own templates: right-click a slide.
 - **Panels**: click the open tab again (or the round arrow) to close the side panel; × or the Animation
   button closes the animation panel.
+- **Text boxes grow to fit** (`src/text-fit.js`): the canvas cuts off any line that does not fit in a text
+  box's height, so the box is made taller whenever its text needs more room (never smaller).
 - **Slide size**: ⋯ menu › Slide size (`src/ui/SlideSize.jsx`). It applies to every slide, so it is not in
   the side panel; the content of each slide is scaled and centered with `fitPage`, unless that is turned off.
 - **Theme style**: new text (heading, subheading, body) and new shapes take the theme's fonts and colors, or a

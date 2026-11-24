@@ -18,6 +18,7 @@ import {
 import { buildExportHtml, exportFileName } from './export';
 import { applySnapshot, getSnapshot } from 'mobx-state-tree';
 import { reaction } from 'mobx';
+import { startTextFit } from './text-fit';
 import { LiveSync } from './live';
 import { t, tn, LANG } from './i18n';
 import { diffPage, applyPageOps, pageOpsEmpty, clone as fastClone } from './sync-core';
@@ -172,6 +173,8 @@ export class Controller {
     store.on('change', (json) => this.onStoreChange(json));
     // Tell collaborators what is selected here.
     reaction(() => (store.selectedElementsIds || []).join(','), () => this.pushPresence());
+    // Text boxes grow when their text needs more room (the canvas would otherwise cut it off).
+    startTextFit(store, () => !this.loading && !!this.project && this.canWrite !== false);
   }
 
   // ---- subscription -------------------------------------------------------

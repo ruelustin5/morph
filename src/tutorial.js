@@ -12,7 +12,7 @@ const SUN = 'tut-sun', BOX = 'tut-box', TITLE = 'tut-title', CAP = 'tut-cap';
 export const TUTORIAL_IDS = { SUN, BOX, TITLE, CAP };
 
 const text = (id, str, x, y, w, size, o = {}) => ({
-  id, type: 'text', text: str, x, y, width: w, height: Math.round(size * 1.2 * (o.lines || 1)), fontSize: size,
+  id, type: 'text', text: str, x, y, width: w, height: Math.ceil(size * 1.2 * (o.lines || 1)), fontSize: size,
   fontFamily: 'Outfit', fontWeight: o.weight || 'bold', fontStyle: 'normal', fill: o.fill || '#1b1f27', align: 'left',
   lineHeight: 1.2, letterSpacing: 0, opacity: 1,
 });
@@ -58,9 +58,11 @@ export function tutorialProject() {
 const ORIGINAL = () => tutorialProject().slides;
 const KEYS = ['x', 'y', 'width', 'height', 'fill', 'text', 'rotation', 'opacity', 'cornerRadius', 'fontSize'];
 // (a text's height is left out: the editor adjusts it to the text by itself)
+// A missing value means the editor's default (the editor fills these in when it saves a slide).
+const DEFAULTS = { rotation: 0, opacity: 1, cornerRadius: 0 };
 const sameEl = (a, b) => !!a && !!b && KEYS.every((k) => {
-  if (k === 'height' && b.type === 'text') return true;
-  const va = a[k], vb = b[k];
+  if (k === 'height' && b.type === 'text') return true; // text boxes grow to fit their text
+  const va = a[k] == null ? DEFAULTS[k] : a[k], vb = b[k] == null ? DEFAULTS[k] : b[k];
   if (va == null && vb == null) return true;
   return typeof va === 'number' && typeof vb === 'number' ? Math.abs(va - vb) < 1.5 : String(va) === String(vb);
 });

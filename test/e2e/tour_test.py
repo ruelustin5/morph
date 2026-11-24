@@ -66,6 +66,8 @@ async def run(p, lang, vw, vh, manual, shots=False):
         if r['step'] == 'done':
             await nxt.click(); await A.wait_for_timeout(2500)
             break
+        if await nxt.is_disabled():
+            print('STUCK at', r['step'], await ev("document.querySelector('.tour-card').innerText"), await ev("(() => { const c = window.__morph.controller; return c.project.slides.map(s => s.page.children.map(e => e.id + ':' + Math.round(e.height)).join(',')); })()"))
         await nxt.click(); await A.wait_for_timeout(400)
     after = await ev("(() => { const c = window.__morph.controller; return { tut: !!c.tutorial, id: c.projectId, title: c.project && c.project.title, n: c.project && c.project.slides.length, list: (c.projects || []).map(x => x.title) }; })()")
     leaked = await ev("Object.keys(localStorage).filter(k => k.includes('__tutorial') || localStorage.getItem(k).includes('tut-sun')).length")
@@ -82,7 +84,8 @@ async def run(p, lang, vw, vh, manual, shots=False):
 
 async def main():
     async with async_playwright() as p:
-        await run(p, 'en-US', 1400, 900, manual=True, shots=True)
+        import sys
+        if 'fr' not in sys.argv: await run(p, 'en-US', 1400, 900, manual=True, shots=True)
         await run(p, 'fr-FR', 1280, 720, manual=False)
         await run(p, 'en-US', 1024, 700, manual=False)
 asyncio.run(main())
