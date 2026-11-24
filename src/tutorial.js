@@ -261,7 +261,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'notes', target: '.notes-bar', optional: true,
     title: 'Speaker notes',
-    body: 'What you want to say on each slide. While presenting, press S to see them: you can change them right there, and drag them anywhere on the screen. They are never in the exported file.',
+    body: 'What you want to say on each slide. While presenting, press S to see them: you can change them right there, and drag them anywhere on the screen. The exported file keeps them only as hidden comments in its code.',
   },
   {
     id: 'assign', target: '.sorter', optional: true,

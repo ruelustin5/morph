@@ -15,9 +15,43 @@ function loadSize(src) {
   });
 }
 
+// Text that is safe inside an HTML comment: no "--" (which could end it early), no "<!-".
+function commentSafe(text) {
+  let s = String(text || '').replace(/\r\n?/g, '\n');
+  while (s.includes('--')) s = s.replace(/--/g, '- -');
+  return s.replace(/<!-/g, '<! -').replace(/-$/gm, '- ');
+}
+
+/** The slide's title for a person reading the code: its biggest text. */
+function slideLabel(page) {
+  let best = null;
+  for (const el of flattenPage(page)) if (el.type === 'text' && el.text && (!best || (el.fontSize || 0) > (best.fontSize || 0))) best = el;
+  const s = best ? String(best.text).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() : '';
+  return s.length > 70 ? s.slice(0, 69) + '…' : s;
+}
+
+/**
+ * Speaker notes as HTML comments, one per slide, in slide order: not shown in the presentation,
+ * but there in the code for whoever reads it.
+ */
+function notesComments(project) {
+  const notes = project.notes || {};
+  const out = [];
+  project.slides.forEach((sl, k) => {
+    const n = String(notes[sl.id] || '').trim();
+    if (!n) return;
+    const label = slideLabel(sl.page);
+    const head = `Slide ${k + 1}${label ? ` · “${label}”` : ''}`;
+    out.push(`<!-- ${commentSafe(head)}\n${commentSafe(n).split('\n').map((l) => '  ' + l).join('\n')}\n-->`);
+  });
+  if (!out.length) return '';
+  return '<!-- Speaker notes: written in the editor, never shown in the presentation. One comment per slide. -->\n' + out.join('\n') + '\n';
+}
+
 export async function buildExportHtml(project, ctx) {
   const p = deepClone(project);
-  // Speaker notes, slide owners and names stay in the app: the exported file is for the audience.
+  // Speaker notes go into the file only as HTML comments (below); slide owners and names stay in the app.
+  const notesHtml = notesComments(p);
   delete p.notes; delete p.owners; delete p.settings; delete p.objects;
   // Resolve SVG color replacements to final images so the player needs no SVG tooling.
   const walk = (children) => {
@@ -84,7 +118,7 @@ ${faces}
 </style>
 </head>
 <body>
-<div id="deck"></div>
+${notesHtml}<div id="deck"></div>
 <script id="deck-data" type="application/json">${json}</script>
 <script>${safeCode}</script>
 </body>

@@ -20,8 +20,8 @@ browser, free, and you can edit together with other people at the same time.
   Once a theme is chosen, **+** offers its layouts. Switch theme later and the slides follow.
 - **Together, without accounts.** Every person you invite gets their own secret link. They open it and they are in,
   live, with no account. Remove a person and their link stops working.
-- **Speaker notes** for each slide, visible to you while presenting (press **S**, drag them anywhere), never in
-  the exported file.
+- **Speaker notes** for each slide, visible to you while presenting (press **S**, drag them anywhere). The
+  exported file never shows them; they are only in its code, as an HTML comment per slide.
   Slides can be **assigned to someone**, and everyone can show **only their own slides**.
 - **Equations** in LaTeX, with a package manager (physics, mhchem, siunitx, braket, cancel…): turn packages on
   once for the presentation instead of writing `\usepackage`. Drop your own `.sty` or `.tex` file and its

@@ -54,7 +54,16 @@ async def main():
         await A.keyboard.press('Escape'); await A.wait_for_timeout(500)
         html = await ev("(async () => { const { buildExportHtml } = window.__morphExport || {}; return null; })()")
         h = await ev("(async () => { const c = window.__morph.controller; const r = await c.exportHtml(); return r.html || ''; })()")
-        print('export contains notes:', ('Alice changed this' in (h or '')) or ('Bob explains' in (h or '')), 'export size', len(h or ''))
+        import re as _re
+        comments = _re.findall(r'<!--(.*?)-->', h or '', _re.S)
+        data = _re.search(r'<script id="deck-data" type="application/json">(.*?)</script>', h or '', _re.S)
+        print('export: notes as comments:', [c.strip().replace('\n', ' / ') for c in comments][:4])
+        print('export: notes in slide data:', bool(data) and ('Alice changed this' in data.group(1) or 'Bob explains' in data.group(1)), '| export size', len(h or ''))
+        # Open the exported file: notes are not shown
+        P = await ctx.new_page()
+        await P.set_content(h or ''); await P.wait_for_timeout(1500)
+        print('export: notes visible on screen:', await P.evaluate("document.body.innerText.includes('Alice changed this') || document.body.innerText.includes('Bob explains')"))
+        await P.close()
         print('\n'.join(logs[:20]))
         await ctx.close()
 asyncio.run(main())

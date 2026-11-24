@@ -28,7 +28,10 @@ async def main():
         await B.keyboard.press('Shift+F5'); await B.wait_for_timeout(500); res['ShiftF5 (no reload)'] = await idx()
         await B.mouse.click(640, 300); await B.wait_for_timeout(1300); res['click'] = await idx()
         await B.keyboard.press('Home'); await B.wait_for_timeout(500); res['Home'] = await idx()
-        res['notes leaked'] = 'speaker' in html.lower() or '"notes"' in html
+        import re as _re
+        data = _re.search(r'<script id="deck-data" type="application/json">(.*?)</script>', html, _re.S)
+        res['notes in slide data'] = bool(data) and ('"notes"' in data.group(1))
+        res['notes shown on screen'] = await B.evaluate("document.body.innerText.toLowerCase().includes('speaker notes')")
         print(res, errs[:3])
         await ctx.close()
 asyncio.run(main())
