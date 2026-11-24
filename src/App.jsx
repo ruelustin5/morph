@@ -25,6 +25,7 @@ import { EquationSection, bindEquations } from './ui/EquationPanel';
 import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
 import { SlideSizeDialog } from './ui/SlideSize';
 import { startClipboard } from './clipboard';
+import { makeHistoryButtons } from './ui/HistoryButtons';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
@@ -275,6 +276,8 @@ export const App = observer(function App({ c, store }) {
   const presentingRef = useRef(false);
   const editorRef = useRef(null);
   const [wsComponents] = useState(() => ({ PageControls: NoPageControls, ContextMenu: makeObjectMenu(c) }));
+  // Undo / redo buttons above the slide use the presentation's history (slides too), like Ctrl+Z.
+  const [toolbarComponents] = useState(() => ({ ...TOOLBAR_COMPONENTS, History: makeHistoryButtons(c) }));
   c.openAnim = () => setAnimOpen(true);
   // First visit (or after the tour changed): show the tour once the editor is ready and nothing else asks for attention.
   const calm = ready && !!c.project && !c.busy && !c.needsName && !c.pendingDraft && presenting == null && !projectsOpen && !shareId && !historyOpen && c.ui.tplAt == null && c.ui.tour == null;
@@ -313,6 +316,26 @@ export const App = observer(function App({ c, store }) {
   }, [c]);
 
   // Editor shortcuts stay off while presenting or while focus is in the slide list / animation panel.
+  // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and redo anything (objects, slides, themes…) from anywhere
+  // in the editor; a text field keeps its own undo, and dialogs are left alone.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const undo = e.code === 'KeyZ' && !e.shiftKey;
+      const redo = (e.code === 'KeyZ' && e.shiftKey) || (e.code === 'KeyY' && !e.shiftKey);
+      if (!undo && !redo) return;
+      if (presentingRef.current) return;
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName || ''))) return;
+      if (a && a.closest && a.closest('.bp5-dialog, .tour-card')) return;
+      e.preventDefault();
+      e.stopImmediatePropagation(); // not the editor's own undo, which only knows the open slide
+      if (undo) c.undo(); else c.redo();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
   // Copy, cut and paste objects (Ctrl+C / Ctrl+X / Ctrl+V), not while presenting or in a dialog.
   useEffect(() => startClipboard(c, store, () => {
     if (presentingRef.current) return false;
@@ -359,7 +382,7 @@ export const App = observer(function App({ c, store }) {
             <RaeditorContainer className="editor-host">
               <SidePanelWrap><SidePanel store={store} sections={SECTIONS_T} defaultSection="" /></SidePanelWrap>
               <WorkspaceWrap>
-                <Toolbar store={store} components={TOOLBAR_COMPONENTS} />
+                <Toolbar store={store} components={toolbarComponents} />
                 <Workspace store={store} pageControlsEnabled={false} components={wsComponents} onKeyDown={onEditorKey} backgroundColor="#f0f4f9" />
                 <ZoomButtons store={store} />
               </WorkspaceWrap>

@@ -70,6 +70,12 @@ browser, and removes it from the address bar. Removing a person gives the projec
   with the old one (colors, fonts, corner radii and role IDs are mapped). Your own templates: right-click a slide.
 - **Panels**: click the open tab again (or the round arrow) to close the side panel; × or the Animation
   button closes the animation panel.
+- **Undo / redo** (`src/history.js`): Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y and the arrows above the slide undo any
+  change: objects, slides added, deleted, duplicated or moved, layouts, theme, slide size, IDs and links, notes,
+  owners. A step stores ops (the live-editing diff format, `src/sync-core.js`), and undo applies the reverse
+  ops to the presentation as it is now, so collaborators' changes in the meantime stay. Changes in a row
+  (dragging, typing) become one step after 350 ms of quiet; operations listed in `STEP_METHODS` are steps of
+  their own. Text boxes growing to fit and collaborators' edits are not steps. Text fields keep their own undo.
 - **Copy and paste** (`src/clipboard.js`): Ctrl+C / Ctrl+X / Ctrl+V and the right-click menu. Pasting on
   another slide of the same presentation keeps the object's ID if that slide does not have it, so it morphs
   (a toast says so and offers "Make separate"); on the same slide, or a second time, it gets a new ID. The
@@ -211,6 +217,8 @@ handles). It first bundles `src/export-entry.js` into `build/player.txt`, the pl
 | `src/storage.js` | versions (thinning, rename, delete, chunked), images, project list, clean-up |
 | `src/mathjax.js` | LaTeX → SVG, `\usepackage` handling, your own commands |
 | `src/latex-macros.js` | reading command definitions out of .sty / .tex files |
+| `src/history.js` | undo / redo for the whole presentation |
+| `src/clipboard.js` | copy, cut and paste |
 | `src/space.js` | encryption layer, invite codes, copying a project between places |
 | `src/web/platform.js`, `src/web/firebase-config.js` | website version: Firebase services, settings |
 | `src/themes.js` | themes and layouts |

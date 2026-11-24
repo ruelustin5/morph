@@ -47,12 +47,13 @@ async def main():
         print('5. image arrived on B:', bimg)
         # 6. undo on A after B changed something else on the same slide must keep B's change
         await B.evaluate("window.__morph.controller.selectSlide(0)"); await B.wait_for_timeout(500)
+        figBefore = await A.evaluate("window.__morph.controller.project.slides[0].page.children.find(e => e.type === 'figure').x")
         await A.evaluate("(() => { const s = window.__morph.store; s.activePage.children.find(e => e.type==='figure').set({x: 500}); })()"); await A.wait_for_timeout(2500)
         await B.evaluate("(() => { const s = window.__morph.store; s.activePage.children.find(e => e.type==='text').set({fill: '#00ff00'}); })()"); await B.wait_for_timeout(3000)
-        await A.evaluate("window.__morph.store.history.undo()"); await A.wait_for_timeout(3000)
+        await A.evaluate("window.__morph.controller.undo()"); await A.wait_for_timeout(3000)
         a5 = await A.evaluate("(() => { const p = window.__morph.controller.project.slides[0].page; const t = p.children.find(e=>e.type==='text'); const f = p.children.find(e=>e.type==='figure'); return {textFill: t.fill, figX: f.x}; })()")
         b5 = await B.evaluate("(() => { const p = window.__morph.controller.project.slides[0].page; const t = p.children.find(e=>e.type==='text'); const f = p.children.find(e=>e.type==='figure'); return {textFill: t.fill, figX: f.x}; })()")
-        print('6. undo kept collaborator change:', a5, b5)
+        print('6. undo kept collaborator change:', a5['textFill'] == '#00ff00' and abs(a5['figX'] - figBefore) < 0.5 and a5 == b5, a5, b5)
         # 7. animation settings + rename + title
         await A.evaluate("(() => { const c = window.__morph.controller; const k = c.project.slides.findIndex((x, i) => i > 0 && x.page.children.length); const f = c.project.slides[k] && c.project.slides[k].page.children[0]; window.__k = k; if (f) c.setAnim(k, [f.id], 'enter', {duration: 1.7, easing: 'bounce'}); const t = c.project.slides[0].page.children.find(e=>e.type==='text'); c.rename(t.id, 'Headline'); c.setTitle('Team deck'); })()")
         await A.wait_for_timeout(3000)

@@ -19,6 +19,7 @@ import { buildExportHtml, exportFileName } from './export';
 import { applySnapshot, getSnapshot } from 'mobx-state-tree';
 import { reaction } from 'mobx';
 import { startTextFit } from './text-fit';
+import { History } from './history';
 import { LiveSync } from './live';
 import { t, tn, LANG } from './i18n';
 import { diffPage, applyPageOps, pageOpsEmpty, clone as fastClone } from './sync-core';
@@ -146,6 +147,12 @@ export function makeRenderCtx(onChange) {
   };
 }
 
+// Operations that are each one step for Undo.
+const STEP_METHODS = [
+  'addSlide', 'duplicateSlide', 'deleteSlide', 'moveSlide', 'insertTemplate', 'setTheme', 'setSlideSize',
+  'rename', 'linkTo', 'linkEverywhere', 'dissociate', 'resetToPrevious', 'setFresh', 'setOwner',
+];
+
 export class Controller {
   constructor(store, toaster) {
     this.store = store;
@@ -174,7 +181,56 @@ export class Controller {
     // Tell collaborators what is selected here.
     reaction(() => (store.selectedElementsIds || []).join(','), () => this.pushPresence());
     // Text boxes grow when their text needs more room (the canvas would otherwise cut it off).
-    startTextFit(store, () => !this.loading && !!this.project && this.canWrite !== false);
+    // That is not a step of its own for Undo.
+    startTextFit(store, () => !this.loading && !!this.project && this.canWrite !== false, (fn) => this.auto(fn));
+    // Undo / redo for everything (src/history.js). Operations that change slides or the whole
+    // presentation are steps of their own; quick object edits in a row become one step.
+    this.history = new History(() => this.emit());
+    let depth = 0;
+    for (const name of STEP_METHODS) {
+      const orig = this[name];
+      if (typeof orig !== 'function') continue;
+      this[name] = (...args) => {
+        if (depth++ === 0) this.checkpoint();
+        try { return orig.apply(this, args); } finally { if (--depth === 0) this.checkpoint(); }
+      };
+    }
+  }
+
+  // ---- undo / redo ----------------------------------------------------------
+  /** What changed so far becomes a step now. */
+  checkpoint() { if (this.project && this.history.pending) this.history.commit(this.project); }
+
+  /** Run a change that is not a step of its own (it joins the step in progress, if any). */
+  auto(fn) {
+    this._auto = (this._auto || 0) + 1;
+    try { return fn(); } finally { this._auto--; }
+  }
+
+  get canUndo() { return !!this.project && this.canWrite !== false && this.history.canUndo; }
+  get canRedo() { return !!this.project && this.canWrite !== false && this.history.canRedo; }
+  undo() { this.stepHistory('undo'); }
+  redo() { this.stepHistory('redo'); }
+
+  stepHistory(dir) {
+    const p = this.project;
+    if (!p || this.canWrite === false || this.presenting != null) return;
+    const activeId = this.activeSlideId();
+    const res = this.history[dir](p);
+    if (!res) return;
+    // Show where the change is: the first slide it touched (a restored slide, an edited one…).
+    const shown = res.touched.find((sid) => sid === activeId) || res.touched.find((sid) => p.slides.some((x) => x.id === sid));
+    let i = p.slides.findIndex((x) => x.id === (shown || activeId));
+    if (i < 0) i = Math.max(0, Math.min(this.active, p.slides.length - 1));
+    this.active = i;
+    ensureFonts(p);
+    this.loadSlide(i);
+    this._noStep = true;
+    try {
+      this.liveTouch(res.touched);
+      this.markDirty();
+    } finally { this._noStep = false; }
+    this.emitNow();
   }
 
   // ---- subscription -------------------------------------------------------
@@ -907,9 +963,11 @@ export class Controller {
     if (info.who && !info.own) { this.noteAuthor(info.who); this.editsSinceVersion = true; }
     const sl = this.project && this.project.slides.find((x) => x.id === sid);
     if (!sl) return;
+    this.checkpoint(); // my own changes so far are a step; this one is not mine
     sl.page = state.page;
     sl.anim = state.anim || {};
     sl.id = state.page.id;
+    this.history.absorb(this.project);
     if (sid === this.activeSlideId()) this.applyToStore(sl.page);
     if (!info.own) ensureFonts(this.project);
     this.emit();
@@ -919,6 +977,12 @@ export class Controller {
   applyLiveMeta(meta, getBase, info = {}) {
     const p = this.project;
     if (!p) return;
+    this.checkpoint();
+    try { this.applyLiveMeta_(meta, getBase, info); } finally { this.history.absorb(this.project); }
+  }
+
+  applyLiveMeta_(meta, getBase, info = {}) {
+    const p = this.project;
     const activeSid = this.activeSlideId();
     const oldIndex = this.active;
     const byId = new Map(p.slides.map((x) => [x.id, x]));
@@ -1210,12 +1274,13 @@ export class Controller {
     ensureFonts(project);
     this.active = Math.max(0, Math.min(active, project.slides.length - 1));
     this.loadSlide(this.active);
+    this.history.reset(project);
     this.emitNow();
     if (split.length && !this.tutorial) {
       setTimeout(() => {
         if (this.project !== project) return;
         this.liveTouch(split);
-        this.markDirty();
+        this.auto(() => this.markDirty());
         this.emitNow();
       }, 0);
     }
@@ -1658,6 +1723,10 @@ export class Controller {
   }
 
   markDirty() {
+    if (this.project && !this._noStep) {
+      if (this._auto) this.history.absorb(this.project, { keepPending: true });
+      else this.history.schedule(() => this.project);
+    }
     this.dirty = true;
     this.editCount = (this.editCount || 0) + 1;
     if (this.tutorial) this.status = { kind: 'ok', text: t('Practice: nothing is saved') };
@@ -1728,6 +1797,10 @@ export class Controller {
     this.toast(t('Slide {n} deleted', { n: i + 1 }), 'none', {
       action: { text: t('Undo'), onClick: () => {
         if (this.project.slides.some((x) => x.id === removed.id)) return;
+        // The deletion is the last step: undo it (the same as Ctrl+Z).
+        this.checkpoint();
+        const top = this.history.past[this.history.past.length - 1];
+        if (top && top.slides.some((d) => d.sid === removed.id && d.before && !d.after)) { this.undo(); return; }
         this.project.slides.splice(Math.min(i, this.project.slides.length), 0, removed);
         this.active = this.project.slides.indexOf(removed);
         this.loadSlide(this.active);

@@ -45,9 +45,9 @@ function texts(children, out = []) {
 
 /**
  * Start watching. `canEdit()` says whether changes may be written now (not while a slide is
- * loading, not for people who can only view).
+ * loading, not for people who can only view). `quietly(fn)` runs a change that is not an Undo step.
  */
-export function startTextFit(store, canEdit) {
+export function startTextFit(store, canEdit, quietly = (fn) => fn()) {
   let timer = 0;
   const fit = () => {
     timer = 0;
@@ -60,7 +60,7 @@ export function startTextFit(store, canEdit) {
       if (!node) continue;
       const need = Math.ceil(neededHeight(node));
       // The canvas drops any line that does not fit entirely, even by a fraction of a pixel.
-      if (need > el.height + 0.01) el.set({ height: need });
+      if (need > el.height + 0.01) quietly(() => el.set({ height: need }));
     }
   };
   // Run after the canvas has drawn the change, so the text node has the new text.

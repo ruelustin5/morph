@@ -363,4 +363,5 @@ export const FR = {
   Cut: 'Couper', Copy: 'Copier', Paste: 'Coller', 'Make separate': 'Séparer',
   '{name} is also on slide {k}, so it morphs between the two.': '{name} est aussi sur la diapo {k}, donc il se transforme de l’une à l’autre.',
   'These objects are also on slide {k}, so they morph between the two.': 'Ces objets sont aussi sur la diapo {k}, donc ils se transforment de l’une à l’autre.',
+  Redo: 'Rétablir',
 };
