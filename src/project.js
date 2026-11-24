@@ -234,3 +234,41 @@ export function demoProject() {
   ensureNames(project);
   return project;
 }
+
+/**
+ * Older theme slides gave every title the same ID (th-<theme>-title), so different titles were
+ * "the same object". Give each its own ID, except on slides in a row with the very same text.
+ * Deterministic (same result on every computer). Returns the ids of the slides that changed.
+ */
+export function splitThemeTitles(project) {
+  const RX = /^th-[a-z0-9]+-title$/;
+  const changed = [];
+  const taken = nameTaken(project);
+  const oldIds = new Set();
+  let prev = [];
+  project.slides.forEach((sl, k) => {
+    const found = [];
+    const walk = (ch) => { for (const el of ch || []) { if (el.children) walk(el.children); if (RX.test(el.id)) found.push(el); } };
+    walk(sl.page && sl.page.children);
+    const next = [];
+    for (const el of found) {
+      const old = el.id, text = String(el.text || '');
+      const run = prev.find((x) => x.old === old && x.text === text);
+      const nid = run ? run.nid : `${old}-${sl.id}`;
+      if (!project.objects[nid]) {
+        let name = `TITLE-${k + 1}`;
+        for (let n = 2; taken.has(name); n++) name = `TITLE-${k + 1}-${n}`;
+        taken.add(name);
+        project.objects[nid] = { name };
+      }
+      if (sl.anim && sl.anim[old]) { sl.anim[nid] = sl.anim[old]; delete sl.anim[old]; }
+      el.id = nid;
+      oldIds.add(old);
+      next.push({ old, text, nid });
+      if (!changed.includes(sl.id)) changed.push(sl.id);
+    }
+    prev = next;
+  });
+  for (const id of oldIds) delete project.objects[id];
+  return changed;
+}

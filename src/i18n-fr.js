@@ -196,7 +196,7 @@ export const FR = {
   'Slow at the start and at the end, fast in the middle.': 'Lent au début et à la fin, rapide au milieu.', 'Goes a little too far, then comes back.': 'Va un peu trop loin, puis revient.',
   'Wobbles around the end like a spring before stopping.': 'Oscille à la fin comme un ressort avant de s’arrêter.', 'Bounces a few times at the end, like a ball.': 'Rebondit quelques fois à la fin, comme une balle.',
   'This yellow circle is called SUN. Its ID is shown here, in the Animation panel. You can rename it: IDs are just names, like SUN, TITLE or A28. They are not shown on the slides.': 'Ce cercle jaune s’appelle SUN. Son ID est affiché ici, dans le panneau Animation. Tu peux le renommer : un ID, c’est juste un nom, comme SUN, TITLE ou A28. Il n’apparaît pas sur les diapos.',
-  'Two objects with different IDs do not morph. To make them the same object, click “Same object as…” and pick the other one (or type its ID in the ID box). A word can even morph into a picture. “Separate here” does the opposite.': 'Deux objets avec des ID différents ne se transforment pas. Pour en faire le même objet, clique sur « Même objet que… » et choisis l’autre (ou tape son ID dans la case ID). Un mot peut même se transformer en image. « Séparer ici » fait le contraire.',
+  'Two objects with different IDs do not morph. To make them the same object, click “Same object as…” and pick the other one (or type its ID in the ID box). A word can even morph into a picture. “Separate here” does the opposite. Copying an object and pasting it on the next slide keeps its ID too.': 'Deux objets avec des ID différents ne se transforment pas. Pour en faire le même objet, clique sur « Même objet que… » et choisis l’autre (ou tape son ID dans la case ID). Un mot peut même se transformer en image. « Séparer ici » fait le contraire. Copier un objet et le coller sur la diapo suivante garde aussi son ID.',
   'With an object selected, the Animation panel says what happens to it, slide by slide. Arrives: Morph or Jump if it was on the slide before, Fade in or Just appear if it is new. Leaves: the same toward the next slide. Then how long it takes, and how it moves (try Bounce). The Play buttons above preview it.': 'Quand un objet est sélectionné, le panneau Animation dit ce qui lui arrive, diapo par diapo. Arrivée : Transformer ou Sauter s’il était sur la diapo d’avant, Fondu entrant ou Apparaître net s’il est nouveau. Départ : pareil vers la diapo suivante. Puis la durée et la façon de bouger (essaie Rebond). Les boutons Jouer au-dessus en montrent un aperçu.',
 
   // ---- strict tutorial ---------------------------------------------------------------------------
@@ -359,4 +359,8 @@ export const FR = {
   'Drag to move the notes. Double-click to put them back.': 'Glisse pour déplacer les notes. Double-clic pour les remettre en place.',
   'Put the notes back at the bottom': 'Remettre les notes en bas', 'Drag to resize': 'Glisse pour redimensionner',
   'Apply {theme} to all {n} slides': 'Appliquer {theme} aux {n} diapos', '“': '«',
+  // ---- copy and paste ------------------------------------------------------------------------------
+  Cut: 'Couper', Copy: 'Copier', Paste: 'Coller', 'Make separate': 'Séparer',
+  '{name} is also on slide {k}, so it morphs between the two.': '{name} est aussi sur la diapo {k}, donc il se transforme de l’une à l’autre.',
+  'These objects are also on slide {k}, so they morph between the two.': 'Ces objets sont aussi sur la diapo {k}, donc ils se transforment de l’une à l’autre.',
 };

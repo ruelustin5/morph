@@ -14,6 +14,7 @@ browser, free, and you can edit together with other people at the same time.
 
 - **Morph animations.** Objects with the same ID on neighbouring slides move and change between them. For each
   object you choose how it arrives and leaves (morph, jump, fade), how long it takes and how it moves.
+  Copy an object and paste it on the next slide: it keeps its ID, so it morphs.
 - **Themes.** 10 themes, each with the same 18 layouts (title, section, agenda, points, compare, big number, quote,
   timeline, definition…). Layouts of a theme share their shapes, so going from one to the next morphs on its own.
   Once a theme is chosen, **+** offers its layouts. Switch theme later and the slides follow.

@@ -5,6 +5,7 @@ import { duplicateElements } from 'opn/utils/duplicate';
 import { MotionIcon } from './People';
 import { nameOf } from '../project';
 import { t } from '../i18n';
+import { copyObjects, pasteObjects, hasClip } from '../clipboard';
 
 /**
  * Right-click menu on canvas objects (replaces the editor's own).
@@ -13,7 +14,17 @@ import { t } from '../i18n';
 export function makeObjectMenu(c) {
   return observer(function ObjectMenu({ store, isOpen, offset, setIsOpen }) {
     const sel = store.selectedElements;
-    if (!sel.length) return null;
+    const mod = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘' : 'Ctrl+';
+    const can = c.canWrite !== false;
+    const close0 = () => setIsOpen(false);
+    if (!sel.length) {
+      // Right-click on an empty spot: paste.
+      if (!hasClip() || !can) return null;
+      return (
+        <ContextMenuPopover isOpen={isOpen} onClose={close0} targetOffset={{ top: offset.y, left: offset.x }}
+          content={<Menu className="obj-menu"><MenuItem icon="clipboard" text={t('Paste')} label={mod + 'V'} onClick={() => pasteObjects(c, store)} /></Menu>} />
+      );
+    }
     const ids = store.selectedElementsIds;
     const page = store.activePage;
     const locked = sel.every((el) => el.locked);
@@ -29,7 +40,10 @@ export function makeObjectMenu(c) {
           <Menu className="obj-menu">
             <MenuItem icon={<MotionIcon size={16} />} text={t('Animation')} label={title} onClick={() => { close(); c.openAnim && c.openAnim(); }} />
             <MenuDivider />
-            <MenuItem icon="duplicate" text={t('Duplicate')} onClick={() => duplicateElements(sel, store)} />
+            <MenuItem icon="cut" text={t('Cut')} label={mod + 'X'} disabled={!can || !sel.some((el) => el.removable)} onClick={() => copyObjects(c, store, { cut: true })} />
+            <MenuItem icon="duplicate" text={t('Copy')} label={mod + 'C'} onClick={() => copyObjects(c, store)} />
+            <MenuItem icon="clipboard" text={t('Paste')} label={mod + 'V'} disabled={!can || !hasClip()} onClick={() => pasteObjects(c, store)} />
+            <MenuItem icon="insert" text={t('Duplicate')} label={mod + 'D'} onClick={() => duplicateElements(sel, store)} />
             <MenuItem icon={locked ? 'unlock' : 'lock'} text={locked ? t('Unlock') : t('Lock')} shouldDismissPopover={false}
               onClick={() => sel.forEach((el) => el.set({ draggable: locked, resizable: locked, contentEditable: locked, styleEditable: locked }))} />
             <MenuItem icon="trash" text={t('Delete')} intent="danger" disabled={!sel.some((el) => el.removable)}

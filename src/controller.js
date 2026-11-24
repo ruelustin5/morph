@@ -4,7 +4,7 @@ import { replaceColors, svgToURL, fixSize } from 'opn/utils/svg';
 import {
   ensureNames, nameOf, idByName, pruneRegistry, setAnim, leafMap, allLeafIds, findRaw, nearestPrevWith,
   duplicateSlideData, blankPage, deepClone, stateProps, makeName, nameTaken, newId, replaceIdInPage, demoProject,
-  normalizeId, normalizeRegistry, freshIds, remapAnim,
+  normalizeId, normalizeRegistry, freshIds, remapAnim, splitThemeTitles,
 } from './project';
 import { flattenPage } from './render';
 import { fitPage } from './builtin-templates';
@@ -1202,6 +1202,8 @@ export class Controller {
     project.objects = project.objects || {};
     if (!project.slides || !project.slides.length) project.slides = [{ id: newId(), page: blankPage(), anim: {} }];
     for (const s of project.slides) { s.anim = s.anim || {}; s.id = s.page.id; }
+    // Titles of older theme slides all shared one ID: give each its own (saved once, see below).
+    const split = this.canWrite === false ? [] : splitThemeTitles(project);
     ensureNames(project);
     normalizeRegistry(project);
     this.project = project;
@@ -1209,6 +1211,14 @@ export class Controller {
     this.active = Math.max(0, Math.min(active, project.slides.length - 1));
     this.loadSlide(this.active);
     this.emitNow();
+    if (split.length && !this.tutorial) {
+      setTimeout(() => {
+        if (this.project !== project) return;
+        this.liveTouch(split);
+        this.markDirty();
+        this.emitNow();
+      }, 0);
+    }
   }
 
   // ---- editor <-> project sync -------------------------------------------
@@ -1371,7 +1381,8 @@ export class Controller {
   insertTemplate(tpl, at) {
     const page = fitPage(deepClone(tpl.page), tpl.w || 1920, tpl.h || 1080, this.project.width, this.project.height);
     page.id = newId();
-    const map = freshIds(page, this.project, (id) => !parseRoleId(id));
+    // Shapes of a theme keep their role ID (so layouts morph); text always gets its own ID.
+    const map = freshIds(page, this.project, (id) => { const r = parseRoleId(id); return !r || r.role === 'title'; });
     if (tpl.theme) {
       for (const id of allLeafIds(page)) if (parseRoleId(id)) this.registerRole(id);
       if ((this.project.settings || {}).theme !== tpl.theme) this.project.settings = { ...(this.project.settings || {}), theme: tpl.theme };

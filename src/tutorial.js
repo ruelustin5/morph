@@ -246,7 +246,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'link', target: '.obj-actions', need: 'base', setup: (c) => show(c, 1, CAP),
     title: 'Turn one object into another',
-    body: 'Two objects with different IDs do not morph. To make them the same object, click “Same object as…” and pick the other one (or type its ID in the ID box). A word can even morph into a picture. “Separate here” does the opposite.',
+    body: 'Two objects with different IDs do not morph. To make them the same object, click “Same object as…” and pick the other one (or type its ID in the ID box). A word can even morph into a picture. “Separate here” does the opposite. Copying an object and pasting it on the next slide keeps its ID too.',
   },
   {
     id: 'layouts', target: '.sorter-head button[data-tour="layouts"]', optional: true,

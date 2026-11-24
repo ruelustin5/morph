@@ -24,6 +24,7 @@ import { makeObjectMenu } from './ui/ObjectMenu';
 import { EquationSection, bindEquations } from './ui/EquationPanel';
 import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
 import { SlideSizeDialog } from './ui/SlideSize';
+import { startClipboard } from './clipboard';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
@@ -312,6 +313,13 @@ export const App = observer(function App({ c, store }) {
   }, [c]);
 
   // Editor shortcuts stay off while presenting or while focus is in the slide list / animation panel.
+  // Copy, cut and paste objects (Ctrl+C / Ctrl+X / Ctrl+V), not while presenting or in a dialog.
+  useEffect(() => startClipboard(c, store, () => {
+    if (presentingRef.current) return false;
+    const a = document.activeElement;
+    return !(a && a.closest && a.closest('.bp5-overlay'));
+  }), []);
+
   const onEditorKey = (e, st) => {
     if (presentingRef.current) return;
     const a = document.activeElement;

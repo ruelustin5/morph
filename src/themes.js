@@ -1,7 +1,9 @@
 // Slide themes. Every theme has every layout, with the same colors and fonts.
-// Five "role" objects (panel, two decorations, accent bar, title) keep the same ID on every
+// Four shape "role" objects (panel, two decorations, accent bar) keep the same ID on every
 // layout of a theme, so going from one layout to another morphs them (the panel grows into a
-// full-screen cover, the title moves and resizes…). Everything else fades in and out.
+// full-screen cover, the circles move…). Text never shares an ID between layouts: a different
+// text is a different object, so it fades out and the new one fades in.
+// (Older presentations used a 'title' role too; it is still recognised so they can be fixed.)
 // Layouts are drawn at 1920×1080 and fitted to the project size when inserted.
 
 import { t } from './i18n';
@@ -147,7 +149,7 @@ function rect(x, y, w, h, fill, o = {}) {
   };
 }
 
-// The five role objects, placed for one layout.
+// The four shape roles (same ID on every layout of the theme) and the slide's title, placed for one layout.
 function roleEls(T, r) {
   const d = (k, def) => {
     const b = r[k];
@@ -162,12 +164,12 @@ function roleEls(T, r) {
     ],
     over: [
       rect(bar.x, bar.y, bar.w, bar.h, bar.fill || T.accent, { id: roleId(T.id, 'bar'), r: Math.min(bar.h / 2, T.radius) }),
-      head(T, t.text, t.x, t.y, t.w, t.size, { id: roleId(T.id, 'title'), fill: t.fill || T.ink, align: t.align, lh: t.lh }),
+      head(T, t.text, t.x, t.y, t.w, t.size, { fill: t.fill || T.ink, align: t.align, lh: t.lh }),
     ],
   };
 }
 
-// Where the role objects sit on ordinary content slides (so content → content only morphs the title).
+// Where the role objects sit on ordinary content slides (so content → content keeps the shapes still).
 const content = (T, title) => ({
   panel: { x: 0, y: 0, w: 24, h: H },
   deco1: { x: 1740, y: -140, s: 320 },

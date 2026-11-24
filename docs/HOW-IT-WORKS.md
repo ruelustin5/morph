@@ -61,12 +61,19 @@ browser, and removes it from the address bar. Removing a person gives the projec
   Bump `TOUR_VERSION` when the interface changes so people see the new tour once.
 - **Fonts**: every Google Font with Latin characters (1,891 families, `src/google-fonts.json`, made from the
   `google-font-metadata` package), searchable and filterable by kind, with classics first.
-- **Themes**: 10 themes × 18 layouts (`src/themes.js`). Five "role" objects (panel, two decorations, accent bar,
-  title) keep the IDs `th-<theme>-<role>` on every layout of a theme, so layouts morph into each other; the
-  project's theme is `settings.theme`, and **+** opens its layouts. Switching theme can restyle the slides made
+- **Themes**: 10 themes × 18 layouts (`src/themes.js`). Four shape "role" objects (panel, two decorations, accent
+  bar) keep the IDs `th-<theme>-<role>` on every layout of a theme, so layouts morph into each other. Text never
+  shares an ID between layouts (a different text is a different object). Older presentations gave every title
+  the ID `th-<theme>-title`; when one is opened, each title gets its own ID (`splitThemeTitles`), except on
+  slides in a row with the same text. The project's theme is `settings.theme`, and **+** opens its layouts. Switching theme can restyle the slides made
   with the old one (colors, fonts, corner radii and role IDs are mapped). Your own templates: right-click a slide.
 - **Panels**: click the open tab again (or the round arrow) to close the side panel; × or the Animation
   button closes the animation panel.
+- **Copy and paste** (`src/clipboard.js`): Ctrl+C / Ctrl+X / Ctrl+V and the right-click menu. Pasting on
+  another slide of the same presentation keeps the object's ID if that slide does not have it, so it morphs
+  (a toast says so and offers "Make separate"); on the same slide, or a second time, it gets a new ID. The
+  copy is kept in `localStorage` (other tabs and presentations, which always get new IDs); the system
+  clipboard gets the objects' text plus a marker, so text copied from another app is pasted as a new text box.
 - **Text boxes grow to fit** (`src/text-fit.js`): the canvas cuts off any line that does not fit in a text
   box's height, so the box is made taller whenever its text needs more room (never smaller).
 - **Slide size**: ⋯ menu › Slide size (`src/ui/SlideSize.jsx`). It applies to every slide, so it is not in
