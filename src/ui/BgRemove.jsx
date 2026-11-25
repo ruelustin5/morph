@@ -128,7 +128,7 @@ export function BgRemoveDialog({ c, store }) {
     <Dialog isOpen={!!id} onClose={close} title={t('Remove backgrounds')} icon="clean" className="bg-dialog">
       <DialogBody>
         <p>{t('Morph removes backgrounds on your computer: your pictures are never sent anywhere.')}</p>
-        <p>{t('The first time, it downloads the background remover (about 110 MB). After that it starts at once, even offline.')}</p>
+        <p>{t('The first time, it downloads the background remover (about 90 MB). After that it starts at once, even offline.')}</p>
       </DialogBody>
       <DialogFooter actions={<>
         <Button text={t('Cancel')} onClick={close} />

@@ -1,7 +1,7 @@
 // Remove the background of a picture, in the browser: nothing is sent anywhere.
 //
 // The model (IS-Net general use, Apache 2.0, assets/bg/README.md) and ONNX Runtime Web are served
-// from this site's bg/ folder and downloaded only the first time (about 90 MB + 15–30 MB). The model
+// from this site's bg/ folder and downloaded only the first time (about 90 MB in all, compressed). The model
 // is kept in the browser's Cache Storage, so later uses start at once, even offline.
 // WebGPU when the browser has it (about a second), otherwise WebAssembly (slower, 10–40 s).
 
@@ -45,7 +45,8 @@ async function loadModel(onProgress) {
   if (hit) { onProgress(1); return new Uint8Array(await hit.arrayBuffer()); }
   const res = await fetch(modelUrl());
   if (!res.ok) throw Object.assign(new Error('model ' + res.status), { code: 'download' });
-  const total = Number(res.headers.get('content-length')) || MODEL_BYTES;
+  // The server may compress it: what arrives is the full file, so count against its real size.
+  const total = Math.max(MODEL_BYTES, Number(res.headers.get('content-length')) || 0);
   const reader = res.body.getReader();
   const parts = [];
   let got = 0;

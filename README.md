@@ -30,7 +30,7 @@ browser, free, and you can edit together with other people at the same time.
   `\newcommand` / `\DeclareMathOperator` lines work in every equation.
 - **Every Google Font** (1,800+), free **photos** (Wikimedia Commons, with the credit added to your notes) and **icons** (Iconify).
 - **Remove background** from a picture, on your own computer (website only): nothing is uploaded. The first use
-  downloads the remover once (about 110 MB); it uses the GPU when the browser can (WebGPU).
+  downloads the remover once (about 90 MB); it uses the GPU when the browser can (WebGPU).
 - **Present** with the keyboard or a classroom clicker (Page Up/Down, B for a black screen, L for a laser dot), and
   **export** one standalone `.html` file that plays anywhere, even offline.
 - **Version history** like Google Slides: saved continuously, name a version, go back, make a copy.

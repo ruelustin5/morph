@@ -375,7 +375,7 @@ export const FR = {
   'This picture could not be read.': 'Cette image n’a pas pu être lue.',
   'The background could not be removed: {e}': 'L’arrière-plan n’a pas pu être supprimé : {e}',
   'Morph removes backgrounds on your computer: your pictures are never sent anywhere.': 'Morph supprime les arrière-plans sur ton ordinateur : tes images ne sont jamais envoyées nulle part.',
-  'The first time, it downloads the background remover (about 110 MB). After that it starts at once, even offline.': 'La première fois, il télécharge l’outil de suppression (environ 110 Mo). Ensuite, il démarre tout de suite, même hors ligne.',
+  'The first time, it downloads the background remover (about 90 MB). After that it starts at once, even offline.': 'La première fois, il télécharge l’outil de suppression (environ 90 Mo). Ensuite, il démarre tout de suite, même hors ligne.',
   'Download and remove': 'Télécharger et supprimer', 'Downloading the background remover… {p}%': 'Téléchargement de l’outil de suppression… {p} %',
   'Removing the background…': 'Suppression de l’arrière-plan…',
 };
