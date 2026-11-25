@@ -1,11 +1,13 @@
 import asyncio, shutil
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 BASE = 'http://localhost:8766/dist-webtest/index.html'
 OUT = '/tmp/shots/'
 async def main():
     shutil.rmtree('/tmp/pw-notes', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-notes', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width': 1400, 'height': 900})
+        await serve_files(ctx)
         logs = []
         def hook(pg, tag):
             pg.on('pageerror', lambda e: logs.append(f'[{tag} pageerror] {e}'))

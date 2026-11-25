@@ -22,7 +22,7 @@ function boot() {
   // browser's cache (back/forward). An old "#3" in the address is cleared.
   try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ }
   const root = document.getElementById('deck') || document.body;
-  const player = createPlayer({ root, project, ctx, startIndex: 0, useHash: false });
+  const player = createPlayer({ root, project, ctx, startIndex: 0, useHash: false, notes: Array.isArray(data.notes) ? data.notes : null });
   window.addEventListener('pageshow', (e) => { if (e.persisted) player.go(0); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => window.dispatchEvent(new Event('resize')));
 }

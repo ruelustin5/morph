@@ -2,12 +2,14 @@
 # thumbnails: presence avatars and the assigned person do not overlap; the exported file starts on slide 1.
 import asyncio, shutil
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 BASE = 'http://localhost:8766/dist-webtest/index.html'
 OUT = '/tmp/shots/'
 async def main():
     shutil.rmtree('/tmp/pw-present', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-present', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width': 1400, 'height': 900})
+        await serve_files(ctx)
         errs = []
         A = ctx.pages[0]
         A.on('pageerror', lambda e: errs.append(str(e)))

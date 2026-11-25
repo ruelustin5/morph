@@ -34,7 +34,7 @@ function slideLabel(page) {
  * Speaker notes as HTML comments, one per slide, in slide order: not shown in the presentation,
  * but there in the code for whoever reads it.
  */
-function notesComments(project) {
+function notesComments(project, shown = false) {
   const notes = project.notes || {};
   const out = [];
   project.slides.forEach((sl, k) => {
@@ -45,13 +45,25 @@ function notesComments(project) {
     out.push(`<!-- ${commentSafe(head)}\n${commentSafe(n).split('\n').map((l) => '  ' + l).join('\n')}\n-->`);
   });
   if (!out.length) return '';
-  return '<!-- Speaker notes: written in the editor, never shown in the presentation. One comment per slide. -->\n' + out.join('\n') + '\n';
+  const intro = shown ? 'Speaker notes: press S in the presentation to show them. One comment per slide.' : 'Speaker notes: written in the editor, never shown in the presentation. One comment per slide.';
+  return `<!-- ${intro} -->\n` + out.join('\n') + '\n';
 }
 
-export async function buildExportHtml(project, ctx) {
+/**
+ * opts.notes: also put the speaker notes and who presents each slide in the file, shown in a panel
+ * (S) that can be moved. opts.personName(key) gives a person's name; opts.lang sets the file's language.
+ */
+export async function buildExportHtml(project, ctx, opts = {}) {
   const p = deepClone(project);
-  // Speaker notes go into the file only as HTML comments (below); slide owners and names stay in the app.
-  const notesHtml = notesComments(p);
+  // Speaker notes are always in the code as HTML comments (below). Shown on screen, with the names of
+  // the people presenting, only in the "with speaker notes" export.
+  const notesHtml = notesComments(p, !!opts.notes);
+  const speaker = opts.notes
+    ? p.slides.map((sl) => {
+      const key = (p.owners || {})[sl.id];
+      return { t: String((p.notes || {})[sl.id] || ''), w: key && opts.personName ? String(opts.personName(key) || '') : '' };
+    })
+    : null;
   delete p.notes; delete p.owners; delete p.settings; delete p.objects;
   // Resolve SVG color replacements to final images so the player needs no SVG tooling.
   const walk = (children) => {
@@ -91,6 +103,7 @@ export async function buildExportHtml(project, ctx) {
   const sizesOut = {};
   for (const [src, sz] of Object.entries(sizes)) sizesOut[keyOf.has(src) ? '@a:' + keyOf.get(src) : src] = sz;
   const data = { project: slim, assets, sizes: sizesOut };
+  if (speaker && speaker.some((x) => x.t.trim() || x.w)) data.notes = speaker;
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
 
   const families = collectFonts(p);
@@ -105,7 +118,7 @@ export async function buildExportHtml(project, ctx) {
   const safeCode = playerCode.replace(/<\/script/gi, '<\\/script');
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escHtml(opts.lang || 'en')}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -125,7 +138,7 @@ ${notesHtml}<div id="deck"></div>
 </html>`;
 }
 
-export function exportFileName(project) {
+export function exportFileName(project, { notes = false } = {}) {
   const base = (project.title || 'presentation').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9-_ ]/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'presentation';
-  return base + '.html';
+  return base + (notes ? '-notes' : '') + '.html';
 }

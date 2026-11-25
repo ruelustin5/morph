@@ -104,10 +104,33 @@ const PLAYER_CSS = `
 .mp-laser-on{cursor:none!important}
 .mp-laser-on .mp-laser.is-in{display:block}
 .mp-btn.is-on{background:rgba(255,59,48,.85)}
+.mp-btn[data-a="notes"].is-on{background:rgba(76,144,240,.9)}
 .mp-help{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;background:rgba(20,20,22,.9);color:#fff;border-radius:16px;padding:18px 22px;font-size:13px;line-height:1.9;display:none;min-width:260px}
 .mp-help.is-open{display:block}
 .mp-help kbd{display:inline-block;min-width:22px;padding:0 6px;margin-right:4px;border-radius:6px;background:rgba(255,255,255,.16);font:inherit;font-size:12px;text-align:center}
 .mp-help div{display:flex;justify-content:space-between;gap:24px}
+.mp-notes{position:absolute;z-index:9;display:none;flex-direction:column;box-sizing:border-box;padding:10px 14px 14px;border-radius:14px;background:rgba(20,20,22,.9);color:#fff;font:400 17px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:auto;user-select:text;-webkit-user-select:text}
+.mp-notes.is-open{display:flex}
+.mp-notes.is-dragging{user-select:none;-webkit-user-select:none;box-shadow:0 14px 44px rgba(0,0,0,.5)}
+.mp-nhead{display:flex;align-items:center;gap:10px;flex:none;margin:-4px -6px 8px;padding:5px 6px;border-radius:9px;font-size:12px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.mp-nhead:hover{background:rgba(255,255,255,.06)}
+.mp-notes.is-dragging .mp-nhead{cursor:grabbing}
+.mp-ngrip{opacity:.45;letter-spacing:-2px;font-size:14px;line-height:1}
+.mp-nslide{opacity:.6;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mp-nwho{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);font-weight:600;font-size:13px;white-space:nowrap;transition:background .3s}
+.mp-nwho::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.8}
+.mp-nwho.is-none{font-weight:400;opacity:.6}
+.mp-nwho.is-none::before{display:none}
+.mp-nwho.is-new{background:#4c90f0}
+.mp-nnext{opacity:.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mp-nbtns{margin-left:auto;display:flex;gap:2px;flex:none}
+.mp-nbtn{all:unset;box-sizing:border-box;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.7;font-size:14px;line-height:1}
+.mp-nbtn:hover,.mp-nbtn:focus-visible{opacity:1;background:rgba(255,255,255,.14)}
+.mp-ntext{flex:1;min-height:0;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding-right:4px}
+.mp-ntext.is-empty{opacity:.45;font-style:italic}
+.mp-cue{color:#9fc3ff;font-weight:600}
+.mp-nresize{position:absolute;right:3px;bottom:3px;width:14px;height:14px;cursor:nwse-resize;touch-action:none;opacity:.45;background:linear-gradient(135deg,transparent 0 55%,#fff 55% 62%,transparent 62% 72%,#fff 72% 79%,transparent 79%)}
+.mp-nresize:hover{opacity:.9}
 `;
 
 const ICONS = {
@@ -116,6 +139,7 @@ const ICONS = {
   full: '<svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
   exit: '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   laser: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
+  notes: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>',
 };
 
 // The player also runs in exported files, so it carries its own few French words.
@@ -125,19 +149,51 @@ const PFR = {
   'Previous slide': 'Diapo précédente', 'Next slide': 'Diapo suivante', Shortcuts: 'Raccourcis',
   'Previous (←)': 'Précédente (←)', 'Next (→ / space / click)': 'Suivante (→ / espace / clic)', 'Shortcuts (?)': 'Raccourcis (?)',
   'Laser pointer (L)': 'Pointeur laser (L)', 'Full screen (F)': 'Plein écran (F)', 'Exit (Esc)': 'Quitter (Échap)',
+  'Speaker notes': 'Notes', 'Speaker notes (S)': 'Notes (S)', 'Slide {n} / {total}': 'Diapo {n} / {total}',
+  'Not assigned': 'Non assignée', 'then {name} (slide {n})': 'puis {name} (diapo {n})',
+  'No notes for this slide.': 'Pas de notes pour cette diapo.', 'Put the notes back at the bottom': 'Remettre les notes en bas',
+  'Hide the notes (S)': 'Cacher les notes (S)', 'Drag to move. Double-click to put back.': 'Glisser pour déplacer. Double-clic pour remettre en place.',
+  'Drag to resize': 'Glisser pour redimensionner',
 };
-const pt = (s) => {
+const pt = (s, vars) => {
   let fr = false;
   try { const l = (document.documentElement.lang || navigator.language || '').toLowerCase(); fr = l.startsWith('fr'); } catch (e) { /* ignore */ }
-  return (fr && PFR[s]) || s;
+  let out = (fr && PFR[s]) || s;
+  if (vars) for (const [k, v] of Object.entries(vars)) out = out.split('{' + k + '}').join(String(v));
+  return out;
 };
+const escText = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Notes as HTML: plain text, with [cues] (stage directions, who speaks) easy to spot. */
+const notesHtml = (s) => escText(s).replace(/\[([^\]\n]{1,120})\]/g, '<span class="mp-cue">[$1]</span>');
+
+// Where the notes panel sits: fractions of the screen, remembered on this device.
+const NOTES_BOX_KEY = 'morph-export-notes-box';
+const NOTES_OPEN_KEY = 'morph-export-notes';
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* file:// may block it */ } },
+};
+const N_MIN_W = 260, N_MIN_H = 110, N_EDGE = 8;
+function clampNotes(b, W, H, mode) {
+  const w = Math.max(N_MIN_W, Math.min(b.w, W - 2 * N_EDGE)), h = Math.max(N_MIN_H, Math.min(b.h, H - 2 * N_EDGE));
+  if (mode === 'size') {
+    const x = Math.max(N_EDGE, Math.min(b.x, W - N_MIN_W - N_EDGE)), y = Math.max(N_EDGE, Math.min(b.y, H - N_MIN_H - N_EDGE));
+    return { x, y, w: Math.min(w, W - x - N_EDGE), h: Math.min(h, H - y - N_EDGE) };
+  }
+  return { x: Math.max(N_EDGE, Math.min(b.x, W - w - N_EDGE)), y: Math.max(N_EDGE, Math.min(b.y, H - h - N_EDGE)), w, h };
+}
 const HELP = [
   ['→ Space PgDn', 'Next'], ['← PgUp', 'Previous'], ['B  .', 'Black screen'], ['W  ,', 'White screen'],
   ['L', 'Laser pointer'], ['F', 'Full screen'], ['Home End', 'First / last'], ['Esc', 'Exit'],
 ];
 
-export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onExit, useHash = false, keyboard = true, autofocus = true }) {
+/**
+ * notes (exported files only): one { t: text, w: who presents it } per slide, or null. Adds a speaker-notes
+ * panel (S) that can be dragged and resized, and says whose turn it is.
+ */
+export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onExit, useHash = false, keyboard = true, autofocus = true, notes = null }) {
   const slides = project.slides;
+  const hasNotes = Array.isArray(notes) && notes.length > 0;
   const W = project.width, H = project.height;
   if (!document.getElementById('mp-style')) {
     const st = document.createElement('style'); st.id = 'mp-style'; st.textContent = PLAYER_CSS; document.head.appendChild(st);
@@ -161,6 +217,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
     `<span class="mp-sep"></span>` +
     `<button class="mp-btn" data-a="help" aria-label="${pt('Shortcuts')}" title="${pt('Shortcuts (?)')}"><b style="font-size:15px">?</b></button>` +
     `<button class="mp-btn" data-a="laser" aria-label="${pt('Laser pointer')}" aria-pressed="false" title="${pt('Laser pointer (L)')}">${ICONS.laser}</button>` +
+    (hasNotes ? `<button class="mp-btn" data-a="notes" aria-label="${pt('Speaker notes')}" aria-pressed="false" title="${pt('Speaker notes (S)')}">${ICONS.notes}</button>` : '') +
     `<button class="mp-btn" data-a="full" aria-label="${pt('Full screen')}" title="${pt('Full screen (F)')}">${ICONS.full}</button>` +
     (onExit ? `<button class="mp-btn" data-a="exit" aria-label="${pt('Exit')}" title="${pt('Exit (Esc)')}">${ICONS.exit}</button>` : '');
   view.appendChild(ui);
@@ -172,9 +229,97 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   view.appendChild(dot);
   const help = document.createElement('div');
   help.className = 'mp-help';
-  help.innerHTML = HELP.map(([k, v]) => `<div><span>${k.split(/\s+/).map((x) => `<kbd>${x}</kbd>`).join('')}</span><span>${pt(v)}</span></div>`).join('');
+  help.innerHTML = (hasNotes ? [...HELP.slice(0, 5), ['S', 'Speaker notes'], ...HELP.slice(5)] : HELP)
+    .map(([k, v]) => `<div><span>${k.split(/\s+/).map((x) => `<kbd>${x}</kbd>`).join('')}</span><span>${pt(v)}</span></div>`).join('');
   view.appendChild(help);
   root.appendChild(view);
+
+  // Speaker notes (exported files only): what to say on this slide, and who says it.
+  let notesOpen = false;
+  let notesBox = null; // fractions of the view: { x, y, w, h }, or null for the default place
+  let whoTimer = 0;
+  const panel = hasNotes ? document.createElement('div') : null;
+  if (panel) {
+    panel.className = 'mp-notes';
+    panel.setAttribute('role', 'note');
+    panel.innerHTML = `<div class="mp-nhead" title="${pt('Drag to move. Double-click to put back.')}"><span class="mp-ngrip" aria-hidden="true">⋮⋮</span>` +
+      `<span class="mp-nslide"></span><span class="mp-nwho"></span><span class="mp-nnext"></span>` +
+      `<span class="mp-nbtns"><button class="mp-nbtn" data-n="reset" title="${pt('Put the notes back at the bottom')}" aria-label="${pt('Put the notes back at the bottom')}">↺</button>` +
+      `<button class="mp-nbtn" data-n="close" title="${pt('Hide the notes (S)')}" aria-label="${pt('Hide the notes (S)')}">✕</button></span></div>` +
+      `<div class="mp-ntext"></div><span class="mp-nresize" title="${pt('Drag to resize')}" aria-hidden="true"></span>`;
+    view.appendChild(panel);
+    try { const b = JSON.parse(store.get(NOTES_BOX_KEY) || 'null'); if (b && [b.x, b.y, b.w, b.h].every(Number.isFinite)) notesBox = b; } catch (e) { /* ignore */ }
+    // Clicks, scrolling and touches in the panel stay in the panel (they do not change slides).
+    for (const ev of ['click', 'pointerdown', 'wheel', 'touchstart', 'touchend', 'dblclick']) panel.addEventListener(ev, (e) => e.stopPropagation(), ev === 'touchstart' || ev === 'wheel' ? { passive: true } : undefined);
+    panel.querySelector('[data-n="close"]').addEventListener('click', () => setNotes(false));
+    panel.querySelector('[data-n="reset"]').addEventListener('click', () => { notesBox = null; store.set(NOTES_BOX_KEY, null); placeNotes(); });
+    const head = panel.querySelector('.mp-nhead');
+    head.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) { notesBox = null; store.set(NOTES_BOX_KEY, null); placeNotes(); } });
+    const startDrag = (mode) => (e) => {
+      if (e.button !== 0 || (mode === 'move' && e.target.closest('button'))) return;
+      e.preventDefault();
+      const vr = view.getBoundingClientRect(), r = panel.getBoundingClientRect();
+      const x0 = e.clientX, y0 = e.clientY, el = e.currentTarget;
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      panel.classList.add('is-dragging');
+      const move = (ev) => {
+        const W = vr.width, H = vr.height, dx = ev.clientX - x0, dy = ev.clientY - y0;
+        const b = clampNotes(mode === 'move'
+          ? { x: r.left - vr.left + dx, y: r.top - vr.top + dy, w: r.width, h: r.height }
+          : { x: r.left - vr.left, y: r.top - vr.top, w: r.width + dx, h: r.height + dy }, W, H, mode);
+        notesBox = { x: b.x / W, y: b.y / H, w: b.w / W, h: b.h / H };
+        placeNotes();
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        panel.classList.remove('is-dragging');
+        if (notesBox) store.set(NOTES_BOX_KEY, JSON.stringify(notesBox));
+      };
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    };
+    head.addEventListener('pointerdown', startDrag('move'));
+    panel.querySelector('.mp-nresize').addEventListener('pointerdown', startDrag('size'));
+  }
+  function placeNotes() {
+    if (!panel) return;
+    const W = view.clientWidth || window.innerWidth, H = view.clientHeight || window.innerHeight;
+    const b = notesBox
+      ? clampNotes({ x: notesBox.x * W, y: notesBox.y * H, w: notesBox.w * W, h: notesBox.h * H }, W, H, 'move')
+      : (() => { const w = Math.min(760, W - 48), h = Math.min(Math.max(150, H * 0.3), H - 2 * N_EDGE); return clampNotes({ x: (W - w) / 2, y: H - h - 72, w, h }, W, H, 'move'); })();
+    Object.assign(panel.style, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px' });
+  }
+  function setNotes(on) {
+    if (!panel) return;
+    notesOpen = on;
+    panel.classList.toggle('is-open', on);
+    const b = ui.querySelector('[data-a="notes"]');
+    if (b) { b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); }
+    store.set(NOTES_OPEN_KEY, on ? '1' : '0');
+    if (on) { placeNotes(); fillNotes(false); }
+  }
+  function fillNotes(turnChanged) {
+    if (!panel) return;
+    const n = notes[index] || {}, who = n.w || '';
+    panel.querySelector('.mp-nslide').textContent = pt('Slide {n} / {total}', { n: index + 1, total: slides.length });
+    const w = panel.querySelector('.mp-nwho');
+    w.textContent = who || pt('Not assigned');
+    w.classList.toggle('is-none', !who);
+    clearTimeout(whoTimer);
+    w.classList.toggle('is-new', !!(turnChanged && who));
+    if (turnChanged && who) whoTimer = setTimeout(() => w.classList.remove('is-new'), 2600);
+    // The next slide presented by someone else: get ready to hand over.
+    let next = '';
+    for (let k = index + 1; k < slides.length; k++) {
+      const o = (notes[k] || {}).w || '';
+      if (o && o !== who) { next = pt('then {name} (slide {n})', { name: o, n: k + 1 }); break; }
+    }
+    panel.querySelector('.mp-nnext').textContent = next;
+    const box = panel.querySelector('.mp-ntext');
+    const txt = String(n.t || '').trim();
+    box.classList.toggle('is-empty', !txt);
+    box.innerHTML = txt ? notesHtml(txt) : escText(pt('No notes for this slide.'));
+    box.scrollTop = 0;
+  }
 
   // Black / white screen (clickers' "blank" button sends B or "."), laser pointer, help.
   let veilMode = null;
@@ -195,12 +340,14 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   }
 
   let index = Math.max(0, Math.min(slides.length - 1, startIndex));
+  let lastNotesIndex = -1;
   let running = null; // { finish }
 
   function layout() {
     const vw = view.clientWidth || window.innerWidth, vh = view.clientHeight || window.innerHeight;
     const s = Math.min(vw / W, vh / H);
     stage.style.transform = `translate(${(vw - W * s) / 2}px, ${(vh - H * s) / 2}px) scale(${s})`;
+    if (notesOpen) placeNotes();
   }
 
   function updateUi() {
@@ -209,6 +356,12 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
     ui.querySelector('[data-a="next"]').disabled = index >= slides.length - 1;
     progress.style.width = slides.length > 1 ? `${(index / (slides.length - 1)) * 100}%` : '100%';
     if (useHash) { try { history.replaceState(null, '', '#' + (index + 1)); } catch (e) { /* ignore */ } }
+    if (notesOpen) {
+      const was = lastNotesIndex >= 0 && notes[lastNotesIndex] ? notes[lastNotesIndex].w || '' : null;
+      const now = (notes[index] || {}).w || '';
+      fillNotes(was !== null && was !== now);
+    }
+    lastNotesIndex = index;
     if (onIndex) onIndex(index);
   }
 
@@ -255,13 +408,14 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
     const tg = e.target;
     if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName || ''))) return;
     const k = e.key;
-    const handled = [...NEXT_KEYS, ...PREV_KEYS, 'Home', 'End', 'f', 'F', 'Escape', 'Delete', 'b', 'B', '.', 'w', 'W', ',', 'l', 'L', '?', 'F5', 'Tab'];
+    const handled = [...NEXT_KEYS, ...PREV_KEYS, 'Home', 'End', 'f', 'F', 'Escape', 'Delete', 'b', 'B', '.', 'w', 'W', ',', 'l', 'L', '?', 'F5', 'Tab', ...(hasNotes ? ['s', 'S'] : [])];
     if (handled.includes(k)) e.stopPropagation();
     if (k === 'F5' || k === 'Tab') { e.preventDefault(); if (k === 'F5' && !e.shiftKey && !(document.fullscreenElement || document.webkitFullscreenElement)) toggleFull(); return; } // clickers' "start" button
     if (help.classList.contains('is-open') && k !== '?') { help.classList.remove('is-open'); if (k === 'Escape') { e.preventDefault(); return; } }
     if (k === 'b' || k === 'B' || k === '.') { e.preventDefault(); setVeil('black'); return; }
     if (k === 'w' || k === 'W' || k === ',') { e.preventDefault(); setVeil('white'); return; }
     if (k === 'l' || k === 'L') { e.preventDefault(); setLaser(!laser); return; }
+    if (hasNotes && (k === 's' || k === 'S')) { e.preventDefault(); setNotes(!notesOpen); return; }
     if (k === '?') { e.preventDefault(); help.classList.toggle('is-open'); return; }
     // Any slide key on a blank screen brings the slide back first (like PowerPoint).
     if (veilMode && (NEXT_KEYS.includes(k) || PREV_KEYS.includes(k) || k === 'Escape')) { e.preventDefault(); setVeil(null); return; }
@@ -285,7 +439,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
     if (b) {
       e.stopPropagation();
       const a = b.dataset.a;
-      if (a === 'prev') prev(); else if (a === 'next') next(); else if (a === 'full') toggleFull(); else if (a === 'laser') setLaser(!laser); else if (a === 'help') help.classList.toggle('is-open'); else if (a === 'exit') onExit && onExit();
+      if (a === 'prev') prev(); else if (a === 'next') next(); else if (a === 'full') toggleFull(); else if (a === 'laser') setLaser(!laser); else if (a === 'help') help.classList.toggle('is-open'); else if (a === 'notes') setNotes(!notesOpen); else if (a === 'exit') onExit && onExit();
       return;
     }
     if (e.target.closest && e.target.closest('.mp-ui')) return;
@@ -320,6 +474,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
   layout();
   showStatic(index);
   updateUi();
+  if (hasNotes && store.get(NOTES_OPEN_KEY) === '1') setNotes(true);
   wake();
   if (autofocus) setTimeout(() => { try { view.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
 
@@ -329,6 +484,7 @@ export function createPlayer({ root, project, ctx, startIndex = 0, onIndex, onEx
     destroy() {
       finishRunning();
       clearTimeout(idleTimer);
+      clearTimeout(whoTimer);
       if (ro) ro.disconnect();
       window.removeEventListener('resize', layout);
       window.removeEventListener('keydown', onKey, true);

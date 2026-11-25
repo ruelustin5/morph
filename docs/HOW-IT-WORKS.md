@@ -50,8 +50,12 @@ browser, and removes it from the address bar. Removing a person gives the projec
   `\let`, simple `\NewDocumentCommand` and `\newenvironment` into MathJax macros. Each one is tried in MathJax
   (`checkMacros`) and dropped if it uses something MathJax does not have. They are kept in `settings.latex.files`.
 - **Notes and slide owners**: `notes` and `owners` maps in the project (per slide id), merged key by key between
-  people. Notes show in the in-app presenter (S). In exported files they are only HTML comments, one per slide in
-  slide order, just before `<div id="deck">` (`notesComments` in `src/export.js`); they are not in the slide data. While presenting, the notes
+  people. Notes show in the in-app presenter (S). In exported files they are HTML comments, one per slide in
+  slide order, just before `<div id="deck">` (`notesComments` in `src/export.js`). Only **Export with speaker
+  notes** also puts them in the slide data (`notes: [{ t: text, w: name of who presents }]`), with the names;
+  the player then has a notes panel (S, `createPlayer({ notes })` in `src/player.js`): `[cues]` highlighted,
+  whose turn it is (highlighted when it changes) and who is next, movable and resizable, its place kept in
+  `localStorage` as fractions of the window. While presenting, the notes
   panel can be dragged by its top bar and resized by its corner; its place is kept on the device (double-click
   the bar to put it back). People's names for owners
   are kept in `settings.people`, inside the (encrypted) project.

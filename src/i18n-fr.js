@@ -13,6 +13,8 @@ export const FR = {
   'Sign-in did not finish: ': 'La connexion n’a pas abouti : ', More: 'Plus', Present: 'Présenter', 'Present options': 'Options de présentation',
   'From the beginning': 'Depuis le début', 'From slide {n}': 'Depuis la diapo {n}',
   'Download the presentation as one standalone .html file': 'Télécharger la présentation en un seul fichier .html autonome',
+  'Export options': 'Options d’exportation', 'for the audience': 'pour le public', 'Export with speaker notes': 'Exporter avec les notes',
+  'Press S in the file to show the notes and who presents each slide. The notes panel can be moved.': 'Dans le fichier, appuie sur S pour voir les notes et qui présente chaque diapo. Le panneau des notes se déplace.',
   Export: 'Exporter', 'Exported {name}': '{name} exporté', 'Export failed: ': 'L’export a échoué : ',
   'Hide the animation panel': 'Masquer le panneau d’animation', 'Show the animation panel': 'Afficher le panneau d’animation',
   'Toggle animation panel': 'Afficher ou masquer le panneau d’animation', Animation: 'Animation', Hide: 'Masquer',

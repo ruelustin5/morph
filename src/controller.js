@@ -2246,9 +2246,10 @@ export class Controller {
     catch (e) { return { ok: false, reason: (e && e.code) || 'error', message: e && e.message }; }
   }
 
-  async exportHtml() {
-    const html = await buildExportHtml(this.project, this.ctx);
-    const name = exportFileName(this.project);
+  /** notes: also show the speaker notes and who presents each slide in the file (S). */
+  async exportHtml({ notes = false } = {}) {
+    const html = await buildExportHtml(this.project, this.ctx, { notes, personName: (k) => this.personName(k), lang: LANG });
+    const name = exportFileName(this.project, { notes });
     const res = await this.download(name, html);
     return { ...res, html, name };
   }

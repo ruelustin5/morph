@@ -232,9 +232,20 @@ const TopBar = observer(function TopBar({ c, onPresent, onExport, exporting, ani
           <Button icon="caret-down" aria-label={t('Present options')} disabled={!p} />
         </Popover>
       </ButtonGroup>
-      <Tooltip content={t('Download the presentation as one standalone .html file')} placement="bottom-end" compact>
-        <Button icon="export" text={t('Export')} intent="primary" loading={exporting} onClick={onExport} disabled={!p} />
-      </Tooltip>
+      <ButtonGroup className="export-group">
+        <Tooltip content={t('Download the presentation as one standalone .html file')} placement="bottom-end" compact>
+          <Button icon="export" text={t('Export')} intent="primary" loading={exporting} onClick={() => onExport()} disabled={!p} />
+        </Tooltip>
+        <Popover placement="bottom-end" minimal content={
+          <Menu>
+            <MenuItem icon="export" text={t('Export')} label={t('for the audience')} onClick={() => onExport()} />
+            <MenuItem icon="annotation" text={t('Export with speaker notes')} onClick={() => onExport({ notes: true })}
+              title={t('Press S in the file to show the notes and who presents each slide. The notes panel can be moved.')} />
+          </Menu>
+        }>
+          <Button icon="caret-down" intent="primary" aria-label={t('Export options')} disabled={!p || exporting} />
+        </Popover>
+      </ButtonGroup>
       <Tooltip content={animOpen ? t('Hide the animation panel') : t('Show the animation panel')} placement="bottom-end" compact>
         <Button icon={<MotionIcon />} text={t('Animation')} className="anim-toggle" minimal active={animOpen} onClick={onToggleAnim} aria-label={t('Toggle animation panel')} aria-pressed={animOpen} />
       </Tooltip>
@@ -362,10 +373,10 @@ export const App = observer(function App({ c, store }) {
     handleHotkey(e, st);
   };
 
-  const doExport = async () => {
+  const doExport = async (opts = {}) => {
     setExporting(true);
     try {
-      const r = await c.exportHtml();
+      const r = await c.exportHtml(opts);
       if (r.ok) c.toast(t('Exported {name}', { name: r.name }), 'success');
       else if (r.reason === 'declined') { /* viewer said no */ }
       else setExportFallback(r);

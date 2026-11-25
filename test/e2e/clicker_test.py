@@ -1,11 +1,13 @@
 # The exported file must follow the keys classroom clickers send (PageDown/PageUp, arrows, B or ".", F5/Shift+F5, Esc).
 import asyncio, shutil
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 BASE = 'http://localhost:8766/dist-webtest/index.html'
 async def main():
     shutil.rmtree('/tmp/pw-click', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-click', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width': 1280, 'height': 720})
+        await serve_files(ctx)
         A = ctx.pages[0]
         await A.goto(BASE + '?u=alice'); await A.wait_for_timeout(2500)
         await A.locator('.join-owner button').click(); await A.wait_for_timeout(4000)
