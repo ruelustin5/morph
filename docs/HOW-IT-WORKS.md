@@ -164,6 +164,12 @@ The artifact is its owner's space. The database rules (declared with the artifac
 - **Removing someone who joined** moves the project to a new place with a new key and re-issues the
   remaining codes; open screens follow a `live/moved` marker, and the old place is emptied. **Stop sharing**
   moves it back to the private part.
+- **Every move** (first share, new key, back to private) leaves the `live/moved` marker in the old place,
+  including the owner's private place, so the owner's other tabs follow too; they also notice the change in
+  the project list. A screen that missed both notices finds out on its next write: the project's list is gone
+  from the old place, so it looks the project up again instead of re-creating it there
+  (`LiveSync.flushMeta`). In every case the changes it had not sent yet are replayed on the new place
+  (`LiveSync.pending`, `Controller.replayPending`).
 - Artifact version: people also need to be invited to the artifact on claude.ai with "Can edit".
   Website version: the link is enough; the owner signs in with Google (the first Google sign-in claims the
   site), visitors are anonymous Firebase users.

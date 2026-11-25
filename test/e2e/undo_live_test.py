@@ -1,12 +1,14 @@
 # Undo with two people editing live: undo only reverts my own changes; a deleted slide comes back for both.
 import asyncio, shutil
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 FAKE = open('test/e2e/fake-artifact.js').read()
 IDS = "window.__morph.controller.project.slides.map(s => s.id)"
 async def main():
     shutil.rmtree('/tmp/pw-undolive', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-undolive', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width': 1400, 'height': 900})
+        await serve_files(ctx)
         await ctx.add_init_script(FAKE)
         errs = []
         A = ctx.pages[0]; A.on('pageerror', lambda e: errs.append(f'A {e}'))

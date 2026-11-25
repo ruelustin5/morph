@@ -1,5 +1,6 @@
 import asyncio, shutil, json
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 FAKE = open('test/e2e/fake-artifact.js').read()
 OUT = '/tmp/'
 URL = 'http://localhost:8766/dist/index.html?roles=1&u='
@@ -7,6 +8,7 @@ async def main():
     shutil.rmtree('/tmp/pw-share', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-share', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width':1400,'height':860})
+        await serve_files(ctx)
         await ctx.add_init_script(FAKE)
         logs = []
         def hook(pg, tag):

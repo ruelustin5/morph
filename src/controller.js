@@ -22,13 +22,15 @@ import { startTextFit } from './text-fit';
 import { History } from './history';
 import { LiveSync } from './live';
 import { t, tn, LANG } from './i18n';
-import { diffPage, applyPageOps, pageOpsEmpty, clone as fastClone } from './sync-core';
+import { diffPage, applyPageOps, pageOpsEmpty, clone as fastClone, applySlide, applyMeta } from './sync-core';
 import { collectFonts, googleFontsUrl } from './render';
 import {
   ScopedBackend, cryptoReady, newKey, randomId, newCode, normalizeCode, codeId, sealInvite, openInvite, copyProjectData, purgeScope,
 } from './space';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Where a project entry's data lives, as a short comparable string. */
+const placeOf = (e) => (e && e.shared ? 'sh:' + e.shared.sid : 'p:' + ((e && e.base) || ''));
 
 /* global __TARGET__ */
 export const TARGET = typeof __TARGET__ !== 'undefined' ? __TARGET__ : 'artifact';
@@ -294,7 +296,7 @@ export class Controller {
     if (this.backend.watch && !this._watchingIndex) {
       this._watchingIndex = true;
       this.backend.watch('meta/projects', (doc) => {
-        if (doc && Array.isArray(doc.list)) { this.projects = doc.list; this.emit(); }
+        if (doc && Array.isArray(doc.list)) { this.projects = doc.list; this.followMovedProject(); this.emit(); }
       });
     }
     return true;
@@ -466,27 +468,71 @@ export class Controller {
     else this.startNewProject(demoProject());
   }
 
-  /** The open project moved to a new key, or access was removed. */
+  /**
+   * The owner's project list changed: if the open project now lives somewhere else (another screen
+   * shared it, changed its key or made it private), follow it. (A deleted project is noticed when this
+   * screen next writes: see LiveSync.flushMeta.)
+   */
+  followMovedProject() {
+    if (!this.isOwner || !this.live || !this.projectId || this._moving || !this.projectPlace) return;
+    const e = (this.projects || []).find((x) => x.id === this.projectId);
+    if (e && placeOf(e) !== this.projectPlace) this.onProjectMoved();
+  }
+
+  /** The open project moved (shared, new key, made private) or was deleted, or access was removed. */
   async onProjectMoved() {
     if (this._moving) return;
     this._moving = true;
     const id = this.projectId;
     const title = this.project && this.project.title;
+    // Changes made here that are not stored yet: replayed on the new place, never lost.
+    let carry = null;
+    try { carry = this.live && this.live.pending(); } catch (e) { carry = null; }
     try {
-      await this.closeLive();
+      await this.closeLive({ flush: false }); // the old place was already copied: writing there is lost
       if (this.isOwner) {
         try { const idx = await loadIndex(this.backend); this.projects = idx.list; } catch (e) { /* keep */ }
+        if (!this.projects.some((x) => x.id === id)) {
+          this.toast(t('“{title}” was deleted on another screen.', { title: title || t('this project') }), 'warning', { timeout: 8000 });
+          await this.openAnother();
+          return;
+        }
         await sleep(600);
-        await this.openProject(id, { silent: true });
+        if (await this.openProject(id, { silent: true })) this.replayPending(id, carry);
         return;
       }
-      if (await this.refreshKey(id)) { await sleep(600); if (await this.openProject(id, { silent: true, quiet: true })) return; }
+      if (await this.refreshKey(id)) { await sleep(600); if (await this.openProject(id, { silent: true, quiet: true })) { this.replayPending(id, carry); return; } }
       this.keyring = this.keyring.filter((x) => x.pid !== id);
       await this.saveKeyring();
       this.toast(t('You no longer have access to “{title}”.', { title: title || t('this project') }), 'warning', { timeout: 8000 });
       await this.openAnother();
     } finally {
       this._moving = false;
+    }
+  }
+
+  /** Put back changes made just before the project moved, on top of what the new place holds, and send them. */
+  replayPending(id, carry) {
+    const p = this.project;
+    if (!carry || !p || !this.live || this.projectId !== id) return;
+    if (!carry.meta && !carry.slides.length && !carry.fresh.length) return;
+    try {
+      for (const [sid, ops] of carry.slides) {
+        const sl = p.slides.find((x) => x.id === sid);
+        if (!sl) continue;
+        this.applyLiveSlide(sid, applySlide({ page: sl.page, anim: sl.anim || {} }, ops), { own: true });
+        this.live.slideChanged(sid);
+      }
+      if (carry.meta || carry.fresh.length) {
+        const fresh = new Map(carry.fresh.map((s) => [s.id, s]));
+        const next = applyMeta(this.liveHost().getMeta(), carry.meta || { order: { ins: [], del: [] }, fields: {} });
+        this.applyLiveMeta(next, (sid) => fresh.get(sid) || null, { own: true });
+        for (const s of carry.fresh) if (this.project.slides.some((x) => x.id === s.id)) this.live.slideChanged(s.id);
+        this.live.metaChanged();
+      }
+      this.markDirty();
+    } catch (e) {
+      console.error('Could not replay changes after the move', e);
     }
   }
 
@@ -572,6 +618,8 @@ export class Controller {
     if (mode === 'private') {
       base = baseFor(entry.id);
       to = { be: this.backend, base };
+      // Start from an empty place (an old "moved" marker or leftovers there would get in the way).
+      try { await purgeProject(this.backend, base); } catch (e) { /* best effort */ }
     } else {
       shared = { sid: randomId(16), key: await newKey() };
       to = { be: new ScopedBackend(this.backend, `sh/${shared.sid}/`, shared.key), base: '' };
@@ -580,6 +628,9 @@ export class Controller {
     }
     this.busy = mode === 'share' ? t('Sharing…') : mode === 'rekey' ? t('Changing the key…') : t('Making it private…');
     this.emitNow();
+    // This screen reopens the project itself: it must not also react to the marker or the list change.
+    const wasMoving = this._moving;
+    if (isCurrent) this._moving = true;
     try {
       await copyProjectData(from.be, from.base, to.be, to.base);
       // Check the copy opens before touching the original.
@@ -598,18 +649,26 @@ export class Controller {
         const sdoc = (await this.backend.get(`shares/${entry.id}`)) || { invites: [] };
         for (const inv of sdoc.invites || []) await this._writeInvite(next, inv);
       }
-      // Tell open screens, reopen here, then empty the old place.
-      if (entry.shared) { try { await from.be.setPlain('live/moved', { moved: true, at: Date.now() }); } catch (e) { /* ignore */ } }
-      if (isCurrent) { await this.closeLive(); await this.openProject(entry.id, { silent: true }); }
+      // Tell open screens (other people, and this person's other tabs), reopen here, then empty the old
+      // place. The marker stays there so a screen that comes back later still follows the project.
+      const mark = { moved: true, at: Date.now() };
+      try { if (entry.shared) await from.be.setPlain('live/moved', mark); else await from.be.set(`${from.base}live/moved`, mark); } catch (e) { /* ignore */ }
+      if (isCurrent) {
+        let carry = null;
+        try { carry = this.live && this.live.pending(); } catch (e) { carry = null; }
+        await this.closeLive({ flush: false });
+        if (await this.openProject(entry.id, { silent: true })) this.replayPending(entry.id, carry);
+      }
       const old = from;
       setTimeout(async () => {
         try {
           if (entry.shared) await purgeScope(old.be, { keepMoved: true });
-          else { await purgeProject(old.be, old.base); await gcAssets(this.backend, this.privateBases()); }
+          else { await purgeProject(old.be, old.base, { keepMoved: true }); await gcAssets(this.backend, this.privateBases()); }
         } catch (e) { /* best effort */ }
       }, 5000);
       return next;
     } finally {
+      if (isCurrent) this._moving = wasMoving;
       this.busy = null;
       this.emitNow();
     }
@@ -797,10 +856,10 @@ export class Controller {
   }
 
   // ---- live editing --------------------------------------------------------------
-  async closeLive() {
+  async closeLive({ flush = true } = {}) {
     if (!this.live) return;
     const live = this.live;
-    try { await live.flushAll(); } catch (e) { /* keep going */ }
+    if (flush) { try { await live.flushAll(); } catch (e) { /* keep going */ } }
     live.close();
     if (this.live === live) this.live = null;
   }
@@ -891,6 +950,10 @@ export class Controller {
     this.projectBase = base;
     this.pbe = be;
     this.projectShared = !!(entry && entry.shared);
+    this.projectPlace = placeOf(entry || { base });
+    // The project list says the project lives here, so a "moved" marker left in this private place is
+    // old (the project was shared, then made private again): remove it, or the screen would keep reopening.
+    if (this.isOwner && !(entry && entry.shared)) { try { if (await be.get(`${base}live/moved`)) await be.del(`${base}live/moved`); } catch (e) { /* ignore */ } }
     this.live = live;
     this.liveStatus = 'synced';
     this.liveAt = loaded.at;

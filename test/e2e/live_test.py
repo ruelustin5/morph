@@ -1,11 +1,13 @@
 import asyncio, shutil, json
 from playwright.async_api import async_playwright
+from localfiles import serve_files
 FAKE = open('test/e2e/fake-artifact.js').read()
 STATE = """(() => { const c = window.__morph.controller; return { pid: c.projectId, slides: c.project.slides.map(s => s.id + ':' + s.page.children.map(e => e.id.slice(0,4) + '@' + Math.round(e.x) + (e.fill ? '/' + e.fill : '') + (e.text ? '/' + e.text.slice(0, 8) : '')).join(',')), title: c.project.title, live: c.liveStatus }; })()"""
 async def main():
     shutil.rmtree('/tmp/pw-profile4', ignore_errors=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context('/tmp/pw-profile4', executable_path='/usr/bin/google-chrome', args=['--no-sandbox'], viewport={'width':1500,'height':900})
+        await serve_files(ctx)
         await ctx.add_init_script(FAKE)
         logs=[]
         A = ctx.pages[0]

@@ -64,6 +64,7 @@ export const FR = {
   'Could not open this project: ': 'Impossible d’ouvrir ce projet : ', 'Could not reach saved data: ': 'Impossible d’accéder aux données enregistrées : ',
   'The latest save could not be read, so the backup from {when} was opened instead.': 'La dernière sauvegarde n’a pas pu être lue : celle de {when} a été ouverte à la place.',
   'You no longer have access to “{title}”.': 'Tu n’as plus accès à « {title} ».', 'this project': 'ce projet',
+  '“{title}” was deleted on another screen.': '« {title} » a été supprimé sur un autre écran.',
   '{name} saved a newer version of this project.': '{name} a enregistré une version plus récente de ce projet.', 'Open it': 'L’ouvrir',
   'Unsaved changes restored and shared.': 'Changements non enregistrés restaurés et partagés.', 'Unsaved changes restored. Remember to save.': 'Changements restaurés. Pense à enregistrer.',
   'All changes are saved automatically.': 'Tous les changements sont enregistrés automatiquement.',

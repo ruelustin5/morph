@@ -366,6 +366,13 @@ export class LiveSync {
     const path = this.path('meta');
     if (!(await this.be.lease(path, this.tab))) throw Object.assign(new Error('busy'), { code: 'busy' });
     const latestDoc = await this.be.get(path);
+    if (!latestDoc && this.baseMeta) {
+      // The project's list vanished while it was open here: it was moved (shared, made private, new
+      // key) or deleted. Never re-create it in the old place: let the app find where it went.
+      if (!this.closed && this.host.onMoved) this.host.onMoved();
+      this.close();
+      return;
+    }
     let merged = L0;
     if (latestDoc && ops) merged = applyMeta(await this.metaFromDocResolved(latestDoc), ops);
     merged.objects = dedupeNames(clone(merged.objects || {}));
@@ -382,6 +389,26 @@ export class LiveSync {
       this.host.applyMeta(clone(next), (sid) => this.bases.get(sid), { own: true });
       if (!metaOpsEmpty(delta)) this.schedule('meta');
     }
+  }
+
+  /**
+   * What this screen changed that is not stored yet, as changes on top of what it last saw, so they
+   * can be replayed on the project's new place after a move: { meta, slides: [[sid, ops]], fresh }.
+   */
+  pending() {
+    const out = { meta: null, slides: [], fresh: [] };
+    const meta = this.host.getMeta();
+    if (!meta) return out;
+    if (this.baseMeta) { const ops = diffMeta(this.baseMeta, meta); if (!metaOpsEmpty(ops)) out.meta = ops; }
+    for (const sid of meta.order) {
+      const local = this.host.getSlide(sid);
+      if (!local) continue;
+      const b = this.bases.get(sid);
+      if (!b) { out.fresh.push({ id: sid, page: clone(local.page), anim: clone(local.anim || {}) }); continue; }
+      const ops = diffSlide(b, { page: local.page, anim: local.anim || {} });
+      if (!slideOpsEmpty(ops)) out.slides.push([sid, ops]);
+    }
+    return out;
   }
 
   close() {

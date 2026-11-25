@@ -411,7 +411,8 @@ export async function gcAssets(be, bases) {
 }
 
 /** Remove every save of a project (its images are collected by gcAssets afterwards). */
-export async function purgeProject(be, base) {
+/** Empty a private project's place. keepMoved leaves the "moved" marker so screens still open there follow the project. */
+export async function purgeProject(be, base, { keepMoved = false } = {}) {
   let saves0 = [];
   try { saves0 = await listSaves(be, base); } catch (e) { /* ignore */ }
   for (const slot of SLOTS) {
@@ -424,7 +425,7 @@ export async function purgeProject(be, base) {
   await be.del(`${base}meta/head`);
   await be.del(`${base}meta/head2`);
   try { for (const v of saves0) await deleteVersionDocs(be, base, v); } catch (e) { /* ignore */ }
-  if (be.list) { try { for (const d of await be.list(`${base}live`)) await be.del(`${base}live/${d.id}`); } catch (e) { /* ignore */ } }
+  if (be.list) { try { for (const d of await be.list(`${base}live`)) if (!(keepMoved && d.id === 'moved')) await be.del(`${base}live/${d.id}`); } catch (e) { /* ignore */ } }
 }
 
 export async function loadSave(be, entry, base = '') {
