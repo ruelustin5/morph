@@ -102,6 +102,15 @@ The website adds **Photos** ([Wikimedia Commons](https://commons.wikimedia.org),
 into the slide's notes) and **Icons** ([Iconify](https://iconify.design)), `src/ui/OnlinePanels.jsx`. Pictures are copied into the
 project (at most 1920 px), so presentations keep working offline. The Claude artifact cannot reach the internet.
 
+**Remove background** (picture toolbar and right-click menu, `src/bg-remove.js`, `src/ui/BgRemove.jsx`) runs the
+IS-Net "general use" model (Apache 2.0) with ONNX Runtime Web, in the browser: pictures never leave the computer.
+The model (`assets/bg/`, 90 MB, made with `assets/bg/convert.py`, see `assets/bg/README.md`) and the runtime are
+served from the site's `bg/` folder and downloaded only when someone first uses it (a dialog asks first); the
+model is then kept in Cache Storage. WebGPU when available, else WebAssembly in a worker (slower, the editor stays
+usable); if the GPU returns an unusable result it is done again on the processor. The result is a WebP with
+transparency trimmed to the subject, placed exactly where the subject was (crop, rotation and flips included),
+and Ctrl+Z puts the original back. Not in the Claude artifact (the model is too big to ship there).
+
 ## Removed because an artifact cannot reach the internet
 
 Artifacts run in a sandbox: no requests to outside servers, no remote images. These editor features call
@@ -219,6 +228,7 @@ handles). It first bundles `src/export-entry.js` into `build/player.txt`, the pl
 | `src/latex-macros.js` | reading command definitions out of .sty / .tex files |
 | `src/history.js` | undo / redo for the whole presentation |
 | `src/clipboard.js` | copy, cut and paste |
+| `src/bg-remove.js` | background removal in the browser |
 | `src/space.js` | encryption layer, invite codes, copying a project between places |
 | `src/web/platform.js`, `src/web/firebase-config.js` | website version: Firebase services, settings |
 | `src/themes.js` | themes and layouts |

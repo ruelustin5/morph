@@ -6,6 +6,7 @@ import { MotionIcon } from './People';
 import { nameOf } from '../project';
 import { t } from '../i18n';
 import { copyObjects, pasteObjects, hasClip } from '../clipboard';
+import { bgRemoveAvailable, bgTarget, startBgRemove } from './BgRemove';
 
 /**
  * Right-click menu on canvas objects (replaces the editor's own).
@@ -43,6 +44,9 @@ export function makeObjectMenu(c) {
             <MenuItem icon="cut" text={t('Cut')} label={mod + 'X'} disabled={!can || !sel.some((el) => el.removable)} onClick={() => copyObjects(c, store, { cut: true })} />
             <MenuItem icon="duplicate" text={t('Copy')} label={mod + 'C'} onClick={() => copyObjects(c, store)} />
             <MenuItem icon="clipboard" text={t('Paste')} label={mod + 'V'} disabled={!can || !hasClip()} onClick={() => pasteObjects(c, store)} />
+            {bgRemoveAvailable() && can && bgTarget(store) && (
+              <MenuItem icon="clean" text={t('Remove background')} disabled={!!c.ui.bg} onClick={() => startBgRemove(c, store, bgTarget(store).id)} />
+            )}
             <MenuItem icon="insert" text={t('Duplicate')} label={mod + 'D'} onClick={() => duplicateElements(sel, store)} />
             <MenuItem icon={locked ? 'unlock' : 'lock'} text={locked ? t('Unlock') : t('Lock')} shouldDismissPopover={false}
               onClick={() => sel.forEach((el) => el.set({ draggable: locked, resizable: locked, contentEditable: locked, styleEditable: locked }))} />

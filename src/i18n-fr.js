@@ -364,4 +364,18 @@ export const FR = {
   '{name} is also on slide {k}, so it morphs between the two.': '{name} est aussi sur la diapo {k}, donc il se transforme de l’une à l’autre.',
   'These objects are also on slide {k}, so they morph between the two.': 'Ces objets sont aussi sur la diapo {k}, donc ils se transforment de l’une à l’autre.',
   Redo: 'Rétablir',
+  // ---- remove background ----------------------------------------------------------------------------
+  'Remove background': 'Supprimer l’arrière-plan', 'Remove backgrounds': 'Supprimer les arrière-plans',
+  'Keep only the subject of the picture': 'Garder seulement le sujet de l’image',
+  'No subject found in this picture: nothing was removed.': 'Aucun sujet trouvé dans cette image : rien n’a été supprimé.',
+  'The subject is outside the visible part of this picture.': 'Le sujet est en dehors de la partie visible de cette image.',
+  'Background removed. Ctrl+Z puts it back.': 'Arrière-plan supprimé. Ctrl+Z le remet.',
+  'This picture’s website does not allow changing it. Download it and add it with Upload.': 'Le site de cette image ne permet pas de la modifier. Télécharge-la et ajoute-la avec Importer.',
+  'The background remover could not be downloaded. Check your connection and try again.': 'L’outil de suppression d’arrière-plan n’a pas pu être téléchargé. Vérifie ta connexion et réessaie.',
+  'This picture could not be read.': 'Cette image n’a pas pu être lue.',
+  'The background could not be removed: {e}': 'L’arrière-plan n’a pas pu être supprimé : {e}',
+  'Morph removes backgrounds on your computer: your pictures are never sent anywhere.': 'Morph supprime les arrière-plans sur ton ordinateur : tes images ne sont jamais envoyées nulle part.',
+  'The first time, it downloads the background remover (about 110 MB). After that it starts at once, even offline.': 'La première fois, il télécharge l’outil de suppression (environ 110 Mo). Ensuite, il démarre tout de suite, même hors ligne.',
+  'Download and remove': 'Télécharger et supprimer', 'Downloading the background remover… {p}%': 'Téléchargement de l’outil de suppression… {p} %',
+  'Removing the background…': 'Suppression de l’arrière-plan…',
 };

@@ -54,5 +54,13 @@ fs.mkdirSync(`${OUT}/mathjax/input/tex/extensions`, { recursive: true });
 fs.copyFileSync('node_modules/mathjax/es5/tex-svg-full.js', `${OUT}/mathjax/tex-svg-full.js`);
 fs.copyFileSync('node_modules/mathjax/es5/input/tex/extensions/physics.js', `${OUT}/mathjax/input/tex/extensions/physics.js`);
 if (WEB) fs.writeFileSync(`${OUT}/.nojekyll`, '');
+// 4) Background removal (web version): the model and ONNX Runtime Web, downloaded by the browser only
+//    the first time someone uses Remove background (assets/bg/README.md).
+if (WEB) {
+  fs.mkdirSync(`${OUT}/bg`, { recursive: true });
+  for (const f of ['isnet-fp16w.onnx', 'README.md', 'LICENSE-Apache-2.0.txt']) fs.copyFileSync(`assets/bg/${f}`, `${OUT}/bg/${f}`);
+  const ort = 'node_modules/onnxruntime-web/dist';
+  for (const f of ['ort.webgpu.min.mjs', 'ort.wasm.min.mjs', 'ort-wasm-simd-threaded.asyncify.mjs', 'ort-wasm-simd-threaded.asyncify.wasm', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) fs.copyFileSync(`${ort}/${f}`, `${OUT}/bg/${f}`);
+}
 const kb = (f) => (fs.statSync(f).size / 1024).toFixed(0) + ' KB';
 console.log(TARGET, '| player', kb('build/player.txt'), '| app.js', kb(`${OUT}/app.js`), '| app.css', kb(`${OUT}/app.css`));

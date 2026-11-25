@@ -26,6 +26,7 @@ import { SaveTemplateDialog, TemplateGallery } from './ui/Templates';
 import { SlideSizeDialog } from './ui/SlideSize';
 import { startClipboard } from './clipboard';
 import { makeHistoryButtons } from './ui/HistoryButtons';
+import { makeBgButton, BgRemoveDialog, BgRemoveStatus, bgRemoveAvailable } from './ui/BgRemove';
 import { ShareDialog, JoinScreen } from './ui/Share';
 import { TextFontFamily } from './ui/FontPicker';
 import { TextFontSize } from './ui/FontSize';
@@ -277,7 +278,12 @@ export const App = observer(function App({ c, store }) {
   const editorRef = useRef(null);
   const [wsComponents] = useState(() => ({ PageControls: NoPageControls, ContextMenu: makeObjectMenu(c) }));
   // Undo / redo buttons above the slide use the presentation's history (slides too), like Ctrl+Z.
-  const [toolbarComponents] = useState(() => ({ ...TOOLBAR_COMPONENTS, History: makeHistoryButtons(c) }));
+  const [toolbarComponents] = useState(() => ({
+    ...TOOLBAR_COMPONENTS,
+    History: makeHistoryButtons(c),
+    // Extra picture-toolbar button (keys starting with "Image" are added to the picture toolbar).
+    ...(bgRemoveAvailable() ? { ImageBackgroundRemover: makeBgButton(c) } : {}),
+  }));
   c.openAnim = () => setAnimOpen(true);
   // First visit (or after the tour changed): show the tour once the editor is ready and nothing else asks for attention.
   const calm = ready && !!c.project && !c.busy && !c.needsName && !c.pendingDraft && presenting == null && !projectsOpen && !shareId && !historyOpen && c.ui.tplAt == null && c.ui.tour == null;
@@ -409,6 +415,8 @@ export const App = observer(function App({ c, store }) {
       {historyOpen && <VersionHistory c={c} onClose={() => setHistoryOpen(false)} />}
       <SaveTemplateDialog c={c} />
       <SlideSizeDialog c={c} />
+      {bgRemoveAvailable() && <BgRemoveDialog c={c} store={store} />}
+      {bgRemoveAvailable() && <BgRemoveStatus c={c} />}
       <TemplateGallery c={c} />
       <Tour c={c} />
       <Dialog isOpen={!!(ready && c.needsName)} title={t('What’s your name?')} icon="user" isCloseButtonShown={!!c.myName()} canEscapeKeyClose={!!c.myName()} canOutsideClickClose={false}
